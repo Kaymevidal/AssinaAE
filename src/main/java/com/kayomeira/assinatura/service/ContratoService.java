@@ -5,6 +5,7 @@ import com.kayomeira.assinatura.dto.ContratoRequestDTO;
 import com.kayomeira.assinatura.exception.ContratoNotFoundException;
 import com.kayomeira.assinatura.exception.PdfInvalidoException;
 import com.kayomeira.assinatura.model.Contrato;
+import com.kayomeira.assinatura.model.Profissional;
 import com.kayomeira.assinatura.model.StatusAssinatura;
 import com.kayomeira.assinatura.repository.ContratoRepository;
 import lombok.RequiredArgsConstructor;
@@ -15,6 +16,7 @@ import org.springframework.web.multipart.MultipartFile;
 
 import java.io.IOException;
 import java.time.LocalDateTime;
+import java.util.List;
 import java.util.UUID;
 
 @Service
@@ -31,7 +33,7 @@ public class ContratoService {
      * assinatura de cada parte e dispara os emails de convite.
      */
     @Transactional
-    public Contrato criarContrato(ContratoRequestDTO dto, MultipartFile pdf) throws IOException {
+    public Contrato criarContrato(ContratoRequestDTO dto, MultipartFile pdf, Profissional profissional) throws IOException {
         byte[] pdfBytes = pdf.getBytes();
 
         if (!assinaturaPDFService.validarPDF(pdfBytes)) {
@@ -41,9 +43,8 @@ public class ContratoService {
         Contrato contrato = Contrato.builder()
                 .titulo(dto.getTitulo())
                 .descricao(dto.getDescricao())
-                .emailProfissional(dto.getEmailProfissional())
+                .profissional(profissional)
                 .emailCliente(dto.getEmailCliente())
-                .nomeProfissional(dto.getNomeProfissional())
                 .nomeCliente(dto.getNomeCliente())
                 .pdfOriginal(pdfBytes)
                 .statusProfissional(StatusAssinatura.PENDENTE)
@@ -62,10 +63,23 @@ public class ContratoService {
         return salvo;
     }
 
+    /** Uso do painel do profissional: só devolve o contrato se ele pertencer a quem está pedindo. */
     @Transactional(readOnly = true)
-    public Contrato buscarPorId(Long id) {
-        return contratoRepository.findById(id)
+    public Contrato buscarPorIdDoProfissional(Long id, Long profissionalId) {
+        Contrato contrato = contratoRepository.findById(id)
                 .orElseThrow(() -> new ContratoNotFoundException("Contrato não encontrado: " + id));
+
+        if (!contrato.getProfissional().getId().equals(profissionalId)) {
+            throw new ContratoNotFoundException("Contrato não encontrado: " + id);
+        }
+
+        return contrato;
+    }
+
+    /** Lista os contratos criados pelo profissional autenticado, mais recentes primeiro. */
+    @Transactional(readOnly = true)
+    public List<Contrato> buscarPorProfissional(Long profissionalId) {
+        return contratoRepository.findByProfissionalIdOrderByDataCriacaoDesc(profissionalId);
     }
 
     /**
@@ -74,16 +88,19 @@ public class ContratoService {
      */
     @Transactional(readOnly = true)
     public ContratoAssinaturaDTO buscarPorToken(String token) {
-        Contrato contrato = contratoRepository.findByTokenProfissional(token).orElse(null);
-        String papel = "PROFISSIONAL";
-
-        if (contrato == null) {
-            contrato = contratoRepository.findByTokenCliente(token)
-                    .orElseThrow(() -> new ContratoNotFoundException("Link de assinatura inválido ou expirado"));
-            papel = "CLIENTE";
-        }
-
+        Contrato contrato = buscarContratoPorTokenOuFalhar(token);
+        String papel = token.equals(contrato.getTokenProfissional()) ? "PROFISSIONAL" : "CLIENTE";
         return ContratoAssinaturaDTO.fromEntity(contrato, papel);
+    }
+
+    /** Uso público (cliente ou profissional acessando pelo próprio link, sem login). */
+    @Transactional(readOnly = true)
+    public byte[] baixarPdfPorToken(String token) {
+        Contrato contrato = buscarContratoPorTokenOuFalhar(token);
+        if (!contrato.ambosAssinaram()) {
+            throw new ContratoNotFoundException("O contrato ainda não foi assinado por ambas as partes");
+        }
+        return contrato.getPdfAssinado();
     }
 
     /**
@@ -98,13 +115,8 @@ public class ContratoService {
      */
     @Transactional
     public ContratoAssinaturaDTO assinar(String token, String assinaturaBase64) throws IOException {
-        Contrato contrato = contratoRepository.findByTokenProfissional(token).orElse(null);
-        boolean isProfissional = contrato != null;
-
-        if (contrato == null) {
-            contrato = contratoRepository.findByTokenCliente(token)
-                    .orElseThrow(() -> new ContratoNotFoundException("Link de assinatura inválido ou expirado"));
-        }
+        Contrato contrato = buscarContratoPorTokenOuFalhar(token);
+        boolean isProfissional = token.equals(contrato.getTokenProfissional());
 
         StatusAssinatura statusAtual = isProfissional ? contrato.getStatusProfissional() : contrato.getStatusCliente();
         if (statusAtual == StatusAssinatura.ASSINADO) {
@@ -113,7 +125,7 @@ public class ContratoService {
 
         byte[] pdfBase = contrato.getPdfAssinado() != null ? contrato.getPdfAssinado() : contrato.getPdfOriginal();
         float posicaoX = isProfissional ? 50 : 350;
-        String nomeSignatario = isProfissional ? contrato.getNomeProfissional() : contrato.getNomeCliente();
+        String nomeSignatario = isProfissional ? contrato.getProfissional().getNome() : contrato.getNomeCliente();
 
         contrato.setPdfAssinado(assinaturaPDFService.adicionarAssinatura(pdfBase, assinaturaBase64, posicaoX, 300, nomeSignatario));
 
@@ -127,7 +139,7 @@ public class ContratoService {
 
         if (contrato.ambosAssinaram()) {
             emailService.notificarContratoAssinado(contrato);
-            emailService.enviarPDFAssinado(contrato.getEmailProfissional(), contrato);
+            emailService.enviarPDFAssinado(contrato.getProfissional().getEmail(), contrato);
             emailService.enviarPDFAssinado(contrato.getEmailCliente(), contrato);
             log.info("Contrato finalizado (ambas as partes assinaram): id={}", contrato.getId());
         }
@@ -135,6 +147,12 @@ public class ContratoService {
         Contrato salvo = contratoRepository.save(contrato);
         String papel = isProfissional ? "PROFISSIONAL" : "CLIENTE";
         return ContratoAssinaturaDTO.fromEntity(salvo, papel);
+    }
+
+    private Contrato buscarContratoPorTokenOuFalhar(String token) {
+        return contratoRepository.findByTokenProfissional(token)
+                .or(() -> contratoRepository.findByTokenCliente(token))
+                .orElseThrow(() -> new ContratoNotFoundException("Link de assinatura inválido ou expirado"));
     }
 
     private String gerarToken() {

@@ -1,11 +1,10 @@
 import { useState } from 'react';
+import { Link } from 'react-router-dom';
 import { criarContrato } from '../services/api';
 
 const CAMPOS_INICIAIS = {
   titulo: '',
   descricao: '',
-  nomeProfissional: '',
-  emailProfissional: '',
   nomeCliente: '',
   emailCliente: '',
 };
@@ -48,8 +47,11 @@ export default function CriarContrato() {
     return (
       <div className="card">
         <h2>Contrato enviado!</h2>
-        <p>Os links de assinatura foram enviados por email para o profissional e o cliente.</p>
-        <button type="button" onClick={() => setSucesso(false)}>Criar outro contrato</button>
+        <p>Os links de assinatura foram enviados por email para você e para o cliente.</p>
+        <div className="acoes-lado-a-lado">
+          <button type="button" onClick={() => setSucesso(false)}>Criar outro contrato</button>
+          <Link to="/">Ver meus contratos</Link>
+        </div>
       </div>
     );
   }
@@ -69,14 +71,6 @@ export default function CriarContrato() {
         </label>
 
         <div className="form__grid">
-          <label>
-            Nome do profissional
-            <input name="nomeProfissional" value={campos.nomeProfissional} onChange={atualizarCampo} required />
-          </label>
-          <label>
-            Email do profissional
-            <input type="email" name="emailProfissional" value={campos.emailProfissional} onChange={atualizarCampo} required />
-          </label>
           <label>
             Nome do cliente
             <input name="nomeCliente" value={campos.nomeCliente} onChange={atualizarCampo} required />

@@ -1,19 +1,19 @@
 import { useEffect, useState } from 'react';
 import { useParams } from 'react-router-dom';
-import { buscarContratoPorId, urlDownload } from '../services/api';
+import { buscarContratoPorToken, urlDownloadPorToken } from '../services/api';
 
 export default function DownloadContrato() {
-  const { id } = useParams();
+  const { token } = useParams();
   const [contrato, setContrato] = useState(null);
   const [erro, setErro] = useState('');
   const [carregando, setCarregando] = useState(true);
 
   useEffect(() => {
-    buscarContratoPorId(id)
+    buscarContratoPorToken(token)
       .then(setContrato)
-      .catch((e) => setErro(e.response?.data?.erro || 'Contrato não encontrado'))
+      .catch((e) => setErro(e.response?.data?.erro || 'Link inválido ou expirado'))
       .finally(() => setCarregando(false));
-  }, [id]);
+  }, [token]);
 
   if (carregando) return <div className="card">Carregando...</div>;
   if (erro) return <div className="card erro">{erro}</div>;
@@ -24,15 +24,10 @@ export default function DownloadContrato() {
       {contrato.ambosAssinaram ? (
         <>
           <p className="sucesso">Contrato assinado por ambas as partes.</p>
-          <a href={urlDownload(id)} className="botao-link">Baixar PDF assinado</a>
+          <a href={urlDownloadPorToken(token)} className="botao-link">Baixar PDF assinado</a>
         </>
       ) : (
-        <p>
-          Aguardando assinatura de{' '}
-          {contrato.statusProfissional !== 'ASSINADO' && contrato.nomeProfissional}
-          {contrato.statusProfissional !== 'ASSINADO' && contrato.statusCliente !== 'ASSINADO' && ' e '}
-          {contrato.statusCliente !== 'ASSINADO' && contrato.nomeCliente}.
-        </p>
+        <p>Aguardando a assinatura da outra parte para liberar o download.</p>
       )}
     </div>
   );

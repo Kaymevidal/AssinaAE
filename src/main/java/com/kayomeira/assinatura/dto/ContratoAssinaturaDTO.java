@@ -28,7 +28,7 @@ public class ContratoAssinaturaDTO {
                 .id(contrato.getId())
                 .titulo(contrato.getTitulo())
                 .descricao(contrato.getDescricao())
-                .nomeProfissional(contrato.getNomeProfissional())
+                .nomeProfissional(contrato.getProfissional().getNome())
                 .nomeCliente(contrato.getNomeCliente())
                 .papel(papel)
                 .statusPapel(isProfissional ? contrato.getStatusProfissional() : contrato.getStatusCliente())

@@ -28,7 +28,7 @@ public class ContratoResponseDTO {
                 .id(contrato.getId())
                 .titulo(contrato.getTitulo())
                 .descricao(contrato.getDescricao())
-                .nomeProfissional(contrato.getNomeProfissional())
+                .nomeProfissional(contrato.getProfissional().getNome())
                 .nomeCliente(contrato.getNomeCliente())
                 .statusProfissional(contrato.getStatusProfissional())
                 .statusCliente(contrato.getStatusCliente())

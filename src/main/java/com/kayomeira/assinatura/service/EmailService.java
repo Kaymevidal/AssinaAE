@@ -10,7 +10,6 @@ import org.springframework.mail.javamail.JavaMailSender;
 import org.springframework.mail.javamail.MimeMessageHelper;
 import org.springframework.stereotype.Service;
 
-import jakarta.mail.MessagingException;
 import jakarta.mail.internet.MimeMessage;
 
 @Service
@@ -33,12 +32,12 @@ public class EmailService {
         try {
             SimpleMailMessage message = new SimpleMailMessage();
             message.setFrom(emailFrom);
-            message.setTo(contrato.getEmailProfissional());
+            message.setTo(contrato.getProfissional().getEmail());
             message.setSubject("Novo contrato aguardando sua assinatura - " + contrato.getTitulo());
             message.setText(gerarCorpoEmailProfissional(contrato));
-            
+
             mailSender.send(message);
-            log.info("Email de assinatura enviado para profissional: {}", contrato.getEmailProfissional());
+            log.info("Email de assinatura enviado para profissional: {}", contrato.getProfissional().getEmail());
         } catch (Exception e) {
             log.error("Erro ao enviar email para profissional", e);
         }
@@ -66,8 +65,8 @@ public class EmailService {
      * Notifica que o contrato foi totalmente assinado
      */
     public void notificarContratoAssinado(Contrato contrato) {
-        enviarNotificacaoAssinado(contrato.getEmailProfissional(), contrato);
-        enviarNotificacaoAssinado(contrato.getEmailCliente(), contrato);
+        enviarNotificacaoAssinado(contrato.getProfissional().getEmail(), contrato.getTokenProfissional(), contrato);
+        enviarNotificacaoAssinado(contrato.getEmailCliente(), contrato.getTokenCliente(), contrato);
     }
     
     /**
@@ -89,7 +88,11 @@ public class EmailService {
             
             mailSender.send(message);
             log.info("PDF assinado enviado para: {}", email);
-        } catch (MessagingException e) {
+        } catch (Exception e) {
+            // Captura tanto MessagingException (montagem da mensagem) quanto as exceções
+            // unchecked do Spring (MailAuthenticationException, MailSendException etc.) —
+            // uma falha de SMTP aqui não pode derrubar a transação e desfazer a assinatura
+            // que acabou de ser registrada.
             log.error("Erro ao enviar PDF assinado", e);
         }
     }
@@ -97,7 +100,7 @@ public class EmailService {
     // ============ Métodos auxiliares ============
     
     private String gerarCorpoEmailProfissional(Contrato contrato) {
-        return "Olá " + contrato.getNomeProfissional() + ",\n\n" +
+        return "Olá " + contrato.getProfissional().getNome() + ",\n\n" +
                 "Você recebeu um novo contrato para assinatura:\n\n" +
                 "Título: " + contrato.getTitulo() + "\n" +
                 "Descrição: " + contrato.getDescricao() + "\n" +
@@ -112,13 +115,13 @@ public class EmailService {
                 "Você recebeu um novo contrato para assinatura:\n\n" +
                 "Título: " + contrato.getTitulo() + "\n" +
                 "Descrição: " + contrato.getDescricao() + "\n" +
-                "Profissional: " + contrato.getNomeProfissional() + "\n\n" +
+                "Profissional: " + contrato.getProfissional().getNome() + "\n\n" +
                 "Clique no link abaixo para assinar:\n" +
                 frontendUrl + "/assinar/" + contrato.getTokenCliente() + "\n\n" +
                 "Atenciosamente,\nPlataforma de Assinatura Digital";
     }
     
-    private void enviarNotificacaoAssinado(String email, Contrato contrato) {
+    private void enviarNotificacaoAssinado(String email, String token, Contrato contrato) {
         try {
             SimpleMailMessage message = new SimpleMailMessage();
             message.setFrom(emailFrom);
@@ -127,7 +130,7 @@ public class EmailService {
             message.setText("Parabéns!\n\n" +
                     "O contrato \"" + contrato.getTitulo() + "\" foi completamente assinado por ambas as partes.\n\n" +
                     "Você pode baixar o PDF assinado no link abaixo:\n" +
-                    frontendUrl + "/download/" + contrato.getId() + "\n\n" +
+                    frontendUrl + "/download/" + token + "\n\n" +
                     "Atenciosamente,\nPlataforma de Assinatura Digital");
             
             mailSender.send(message);

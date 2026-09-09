@@ -32,7 +32,7 @@ export default function AssinarContrato() {
       const atualizado = await assinarContrato(token, assinatura);
       setContrato(atualizado);
       if (atualizado.ambosAssinaram) {
-        navigate(`/download/${atualizado.id}`);
+        navigate(`/download/${token}`);
       }
     } catch (e) {
       setErro(e.response?.data?.erro || 'Não foi possível registrar a assinatura');

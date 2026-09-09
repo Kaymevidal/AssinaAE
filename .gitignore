@@ -28,5 +28,8 @@ src/frontend/.env.local
 ### VS Code ###
 .vscode/
 
+### Claude Code ###
+.claude/
+
 ### Environment ###
 .env

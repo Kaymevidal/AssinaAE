@@ -14,9 +14,26 @@ body {
 }
 
 .app__header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
   padding: 16px 24px;
   background: #fff;
   border-bottom: 1px solid #e2e4e8;
+}
+
+.app__conta {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  font-size: 0.9rem;
+}
+
+.app__conta button {
+  padding: 6px 12px;
+  background: transparent;
+  color: #1a1a1a;
+  border: 1px solid #cfd3d9;
 }
 
 .app__logo {
@@ -123,4 +140,68 @@ button:disabled {
   border-radius: 6px;
   text-decoration: none;
   font-weight: 600;
+}
+
+.separador {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin: 20px 0;
+  color: #8a8f98;
+  font-size: 0.85rem;
+}
+
+.separador::before,
+.separador::after {
+  content: '';
+  flex: 1;
+  height: 1px;
+  background: #e2e4e8;
+}
+
+.rodape-form {
+  margin-top: 20px;
+  font-size: 0.9rem;
+  text-align: center;
+}
+
+.acoes-lado-a-lado {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  margin-top: 8px;
+}
+
+.painel__cabecalho {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.painel__lista {
+  list-style: none;
+  padding: 0;
+  margin: 8px 0 24px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.painel__item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 12px;
+  border: 1px solid #e2e4e8;
+  border-radius: 6px;
+}
+
+.painel__cliente {
+  color: #6b7280;
+  font-weight: 400;
+}
+
+.painel__vazio {
+  color: #6b7280;
+  font-size: 0.9rem;
 }

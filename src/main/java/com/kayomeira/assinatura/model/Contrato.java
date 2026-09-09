@@ -24,16 +24,14 @@ public class Contrato {
     
     @Column(nullable = false)
     private String descricao;
-    
-    @Column(nullable = false)
-    private String emailProfissional;
-    
+
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "profissional_id", nullable = false)
+    private Profissional profissional;
+
     @Column(nullable = false)
     private String emailCliente;
-    
-    @Column(nullable = false)
-    private String nomeProfissional;
-    
+
     @Column(nullable = false)
     private String nomeCliente;
     
