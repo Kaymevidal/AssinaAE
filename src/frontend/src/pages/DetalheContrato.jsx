@@ -48,6 +48,8 @@ export default function DetalheContrato() {
         <button type="button" onClick={baixar} disabled={baixando}>
           {baixando ? 'Baixando...' : 'Baixar PDF assinado'}
         </button>
+      ) : contrato.statusProfissional === 'REJEITADO' || contrato.statusCliente === 'REJEITADO' ? (
+        <p className="erro">Este contrato foi recusado.</p>
       ) : (
         <p className="painel__vazio">Aguardando assinatura de ambas as partes.</p>
       )}

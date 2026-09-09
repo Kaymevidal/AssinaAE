@@ -3,6 +3,9 @@ import { useAuth } from './context/AuthContext';
 import RotaProtegida from './components/RotaProtegida';
 import Login from './pages/Login';
 import Registrar from './pages/Registrar';
+import EsqueciSenha from './pages/EsqueciSenha';
+import RedefinirSenha from './pages/RedefinirSenha';
+import VerificarEmail from './pages/VerificarEmail';
 import PainelProfissional from './pages/PainelProfissional';
 import DetalheContrato from './pages/DetalheContrato';
 import CriarContrato from './pages/CriarContrato';
@@ -34,6 +37,9 @@ export default function App() {
         <Routes>
           <Route path="/login" element={<Login />} />
           <Route path="/registrar" element={<Registrar />} />
+          <Route path="/esqueci-senha" element={<EsqueciSenha />} />
+          <Route path="/redefinir-senha/:token" element={<RedefinirSenha />} />
+          <Route path="/verificar-email/:token" element={<VerificarEmail />} />
 
           <Route path="/" element={<RotaProtegida><PainelProfissional /></RotaProtegida>} />
           <Route path="/novo-contrato" element={<RotaProtegida><CriarContrato /></RotaProtegida>} />

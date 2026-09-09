@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import BotaoGoogle from '../components/BotaoGoogle';
+import { reenviarVerificacao } from '../services/api';
 
 export default function Registrar() {
   const { registrar, entrarComGoogle } = useAuth();
@@ -12,6 +13,8 @@ export default function Registrar() {
   const [senha, setSenha] = useState('');
   const [erro, setErro] = useState('');
   const [enviando, setEnviando] = useState(false);
+  const [registrado, setRegistrado] = useState(false);
+  const [reenviado, setReenviado] = useState(false);
 
   async function submeter(evento) {
     evento.preventDefault();
@@ -19,7 +22,7 @@ export default function Registrar() {
     setEnviando(true);
     try {
       await registrar({ nome, email, senha });
-      navigate('/dashboard');
+      setRegistrado(true);
     } catch (e) {
       setErro(e.response?.data?.erro || 'Não foi possível criar a conta');
     } finally {
@@ -31,10 +34,32 @@ export default function Registrar() {
     setErro('');
     try {
       await entrarComGoogle(credential);
-      navigate('/dashboard');
+      navigate('/');
     } catch (e) {
       setErro(e.response?.data?.erro || 'Não foi possível entrar com o Google');
     }
+  }
+
+  async function reenviar() {
+    await reenviarVerificacao(email);
+    setReenviado(true);
+  }
+
+  if (registrado) {
+    return (
+      <div className="card">
+        <h2>Confirme seu email</h2>
+        <p>Enviamos um link de confirmação para <strong>{email}</strong>. Você já pode entrar, mas só consegue enviar contratos depois de confirmar.</p>
+        {reenviado ? (
+          <p className="sucesso">Email reenviado.</p>
+        ) : (
+          <button type="button" onClick={reenviar}>Reenviar email</button>
+        )}
+        <p className="rodape-form">
+          <Link to="/login">Ir para o login</Link>
+        </p>
+      </div>
+    );
   }
 
   return (

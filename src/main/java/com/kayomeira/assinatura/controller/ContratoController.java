@@ -10,6 +10,8 @@ import com.kayomeira.assinatura.model.Profissional;
 import com.kayomeira.assinatura.service.ContratoService;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
@@ -18,7 +20,6 @@ import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
 
 import java.io.IOException;
-import java.util.List;
 
 @RestController
 @RequestMapping("/api/contratos")
@@ -36,12 +37,15 @@ public class ContratoController {
         return ResponseEntity.ok(ContratoResponseDTO.fromEntity(contrato));
     }
 
-    /** Painel do profissional: todos os contratos que ele criou. */
+    /** Painel do profissional: contratos que ele criou, paginados. */
     @GetMapping("/meus")
-    public ResponseEntity<List<ContratoResponseDTO>> meusContratos(@AuthenticationPrincipal Profissional profissional) {
-        List<ContratoResponseDTO> contratos = contratoService.buscarPorProfissional(profissional.getId()).stream()
-                .map(ContratoResponseDTO::fromEntity)
-                .toList();
+    public ResponseEntity<Page<ContratoResponseDTO>> meusContratos(
+            @AuthenticationPrincipal Profissional profissional,
+            @RequestParam(defaultValue = "0") int page,
+            @RequestParam(defaultValue = "20") int size) {
+        Page<ContratoResponseDTO> contratos = contratoService
+                .buscarPorProfissional(profissional.getId(), PageRequest.of(page, size))
+                .map(ContratoResponseDTO::fromEntity);
         return ResponseEntity.ok(contratos);
     }
 
@@ -79,6 +83,11 @@ public class ContratoController {
     public ResponseEntity<byte[]> downloadPorToken(@PathVariable String token) {
         byte[] pdf = contratoService.baixarPdfPorToken(token);
         return pdfComoAnexo(pdf, "contrato-assinado.pdf");
+    }
+
+    @PostMapping("/token/{token}/rejeitar")
+    public ResponseEntity<ContratoAssinaturaDTO> rejeitar(@PathVariable String token) {
+        return ResponseEntity.ok(contratoService.rejeitar(token));
     }
 
     private ResponseEntity<byte[]> pdfComoAnexo(byte[] pdf, String nomeArquivo) {

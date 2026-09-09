@@ -22,24 +22,30 @@ import org.springframework.transaction.annotation.Transactional;
 import java.security.GeneralSecurityException;
 import java.time.LocalDateTime;
 import java.util.List;
+import java.util.UUID;
 
 @Service
 @Slf4j
 public class AuthService {
 
+    private static final int RESET_SENHA_VALIDADE_HORAS = 1;
+
     private final ProfissionalRepository profissionalRepository;
     private final PasswordEncoder passwordEncoder;
     private final JwtService jwtService;
+    private final EmailService emailService;
     private final GoogleIdTokenVerifier googleIdTokenVerifier;
 
     public AuthService(
             ProfissionalRepository profissionalRepository,
             PasswordEncoder passwordEncoder,
             JwtService jwtService,
+            EmailService emailService,
             @Value("${app.google-client-id:}") String googleClientId) {
         this.profissionalRepository = profissionalRepository;
         this.passwordEncoder = passwordEncoder;
         this.jwtService = jwtService;
+        this.emailService = emailService;
         this.googleIdTokenVerifier = new GoogleIdTokenVerifier.Builder(new NetHttpTransport(), GsonFactory.getDefaultInstance())
                 .setAudience(List.of(googleClientId))
                 .build();
@@ -56,11 +62,79 @@ public class AuthService {
                 .email(dto.getEmail())
                 .senhaHash(passwordEncoder.encode(dto.getSenha()))
                 .dataCriacao(LocalDateTime.now())
+                .emailVerificado(false)
+                .tokenVerificacaoEmail(UUID.randomUUID().toString())
                 .build();
 
         Profissional salvo = profissionalRepository.save(profissional);
+        emailService.enviarEmailVerificacao(salvo);
         log.info("Profissional registrado: id={}, email={}", salvo.getId(), salvo.getEmail());
         return AuthResponseDTO.de(jwtService.gerarToken(salvo.getId()), salvo);
+    }
+
+    /**
+     * Confirma o email a partir do link enviado no cadastro. Devolve um
+     * token novo para já deixar a pessoa logada depois de confirmar.
+     */
+    @Transactional
+    public AuthResponseDTO verificarEmail(String token) {
+        Profissional profissional = profissionalRepository.findByTokenVerificacaoEmail(token)
+                .orElseThrow(() -> new BadCredentialsException("Link de verificação inválido ou já usado"));
+
+        profissional.setEmailVerificado(true);
+        profissional.setTokenVerificacaoEmail(null);
+        Profissional salvo = profissionalRepository.save(profissional);
+
+        return AuthResponseDTO.de(jwtService.gerarToken(salvo.getId()), salvo);
+    }
+
+    /**
+     * Reenvia o email de verificação. Não revela se o email existe ou já
+     * está verificado — quem chama sempre recebe a mesma resposta genérica.
+     */
+    @Transactional
+    public void reenviarVerificacao(String email) {
+        profissionalRepository.findByEmail(email)
+                .filter(p -> !p.isEmailVerificado())
+                .ifPresent(profissional -> {
+                    profissional.setTokenVerificacaoEmail(UUID.randomUUID().toString());
+                    profissionalRepository.save(profissional);
+                    emailService.enviarEmailVerificacao(profissional);
+                });
+    }
+
+    /**
+     * Início da recuperação de senha. Resposta sempre genérica (não revela
+     * se o email existe nem se a conta usa senha ou só login Google) —
+     * evita que alguém use este endpoint pra descobrir contas cadastradas.
+     */
+    @Transactional
+    public void esqueciSenha(String email) {
+        profissionalRepository.findByEmail(email)
+                .filter(p -> p.getSenhaHash() != null)
+                .ifPresent(profissional -> {
+                    profissional.setTokenResetSenha(UUID.randomUUID().toString());
+                    profissional.setTokenResetExpiracao(LocalDateTime.now().plusHours(RESET_SENHA_VALIDADE_HORAS));
+                    profissionalRepository.save(profissional);
+                    emailService.enviarEmailResetSenha(profissional);
+                });
+    }
+
+    @Transactional
+    public void redefinirSenha(String token, String novaSenha) {
+        Profissional profissional = profissionalRepository.findByTokenResetSenha(token)
+                .orElseThrow(() -> new BadCredentialsException("Link de redefinição inválido ou expirado"));
+
+        if (profissional.getTokenResetExpiracao() == null
+                || profissional.getTokenResetExpiracao().isBefore(LocalDateTime.now())) {
+            throw new BadCredentialsException("Link de redefinição inválido ou expirado");
+        }
+
+        profissional.setSenhaHash(passwordEncoder.encode(novaSenha));
+        profissional.setTokenResetSenha(null);
+        profissional.setTokenResetExpiracao(null);
+        profissionalRepository.save(profissional);
+        log.info("Senha redefinida: id={}", profissional.getId());
     }
 
     @Transactional(readOnly = true)
@@ -92,6 +166,8 @@ public class AuthService {
                         .build());
 
         profissional.setGoogleId(googleId);
+        // O Google já confirmou a posse do email — não precisa do fluxo de verificação por link.
+        profissional.setEmailVerificado(true);
         Profissional salvo = profissionalRepository.save(profissional);
 
         return AuthResponseDTO.de(jwtService.gerarToken(salvo.getId()), salvo);

@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
-import { assinarContrato, buscarContratoPorToken } from '../services/api';
+import { assinarContrato, buscarContratoPorToken, rejeitarContrato } from '../services/api';
 import SignaturePad from '../components/SignaturePad';
 
 export default function AssinarContrato() {
@@ -12,6 +12,7 @@ export default function AssinarContrato() {
   const [erro, setErro] = useState('');
   const [assinatura, setAssinatura] = useState(null);
   const [assinando, setAssinando] = useState(false);
+  const [recusando, setRecusando] = useState(false);
 
   useEffect(() => {
     buscarContratoPorToken(token)
@@ -41,10 +42,26 @@ export default function AssinarContrato() {
     }
   }
 
+  async function confirmarRecusa() {
+    if (!window.confirm('Tem certeza que quer recusar este contrato? Essa ação não pode ser desfeita.')) return;
+
+    setRecusando(true);
+    setErro('');
+    try {
+      const atualizado = await rejeitarContrato(token);
+      setContrato(atualizado);
+    } catch (e) {
+      setErro(e.response?.data?.erro || 'Não foi possível recusar o contrato');
+    } finally {
+      setRecusando(false);
+    }
+  }
+
   if (carregando) return <div className="card">Carregando...</div>;
   if (erro && !contrato) return <div className="card erro">{erro}</div>;
 
   const jaAssinou = contrato.statusPapel === 'ASSINADO';
+  const jaRecusou = contrato.statusPapel === 'REJEITADO';
   const nomeSignatario = contrato.papel === 'PROFISSIONAL' ? contrato.nomeProfissional : contrato.nomeCliente;
 
   return (
@@ -55,16 +72,23 @@ export default function AssinarContrato() {
         Profissional: <strong>{contrato.nomeProfissional}</strong> &middot; Cliente: <strong>{contrato.nomeCliente}</strong>
       </p>
 
-      {jaAssinou ? (
+      {jaRecusou ? (
+        <p className="erro">Você recusou este contrato, {nomeSignatario}.</p>
+      ) : jaAssinou ? (
         <p className="sucesso">Você já assinou este contrato, {nomeSignatario}. Aguardando a outra parte.</p>
       ) : (
         <>
           <p>Assine abaixo, {nomeSignatario}:</p>
           <SignaturePad onChange={setAssinatura} />
           {erro && <p className="erro">{erro}</p>}
-          <button type="button" onClick={confirmarAssinatura} disabled={assinando}>
-            {assinando ? 'Assinando...' : 'Confirmar assinatura'}
-          </button>
+          <div className="acoes-lado-a-lado">
+            <button type="button" onClick={confirmarAssinatura} disabled={assinando || recusando}>
+              {assinando ? 'Assinando...' : 'Confirmar assinatura'}
+            </button>
+            <button type="button" className="botao-perigo" onClick={confirmarRecusa} disabled={assinando || recusando}>
+              {recusando ? 'Recusando...' : 'Recusar contrato'}
+            </button>
+          </div>
         </>
       )}
     </div>

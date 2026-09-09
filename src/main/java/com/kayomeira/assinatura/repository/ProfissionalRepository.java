@@ -10,4 +10,6 @@ import java.util.Optional;
 public interface ProfissionalRepository extends JpaRepository<Profissional, Long> {
     Optional<Profissional> findByEmail(String email);
     Optional<Profissional> findByGoogleId(String googleId);
+    Optional<Profissional> findByTokenVerificacaoEmail(String token);
+    Optional<Profissional> findByTokenResetSenha(String token);
 }

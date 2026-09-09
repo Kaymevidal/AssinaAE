@@ -26,8 +26,10 @@ export default function DownloadContrato() {
           <p className="sucesso">Contrato assinado por ambas as partes.</p>
           <a href={urlDownloadPorToken(token)} className="botao-link">Baixar PDF assinado</a>
         </>
+      ) : contrato.statusPapel === 'REJEITADO' ? (
+        <p className="erro">Você recusou este contrato — nenhuma ação adicional é necessária.</p>
       ) : (
-        <p>Aguardando a assinatura da outra parte para liberar o download.</p>
+        <p>Aguardando a assinatura (ou recusa) da outra parte para liberar o download.</p>
       )}
     </div>
   );

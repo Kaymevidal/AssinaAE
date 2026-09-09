@@ -5,6 +5,8 @@ import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
 import lombok.NoArgsConstructor;
+import org.hibernate.annotations.JdbcTypeCode;
+import org.hibernate.type.SqlTypes;
 import java.time.LocalDateTime;
 
 @Entity
@@ -35,11 +37,16 @@ public class Contrato {
     @Column(nullable = false)
     private String nomeCliente;
     
-    @Lob
+    // Sem @Lob de propósito: em Postgres, @Lob byte[] pode mapear para OID
+    // (large object, exige lo_* e não bate com a coluna BYTEA da migration
+    // do Flyway) e em H2 a combinação com o modo Postgres já se provou
+    // instável (convertia pra INTEGER). VARBINARY explícito é o mesmo em
+    // ambos: bytea no Postgres, binário de verdade no H2.
+    @JdbcTypeCode(SqlTypes.VARBINARY)
     @Column(nullable = false)
     private byte[] pdfOriginal;
-    
-    @Lob
+
+    @JdbcTypeCode(SqlTypes.VARBINARY)
     private byte[] pdfAssinado;
     
     @Enumerated(EnumType.STRING)

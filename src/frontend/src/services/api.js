@@ -41,6 +41,22 @@ export function loginGoogle(credential) {
   return api.post('/auth/google', { credential }).then((res) => res.data);
 }
 
+export function verificarEmail(token) {
+  return api.get(`/auth/verificar-email/${token}`).then((res) => res.data);
+}
+
+export function reenviarVerificacao(email) {
+  return api.post('/auth/reenviar-verificacao', { email }).then((res) => res.data);
+}
+
+export function esqueciSenha(email) {
+  return api.post('/auth/esqueci-senha', { email }).then((res) => res.data);
+}
+
+export function redefinirSenha(token, novaSenha) {
+  return api.post('/auth/redefinir-senha', { token, novaSenha }).then((res) => res.data);
+}
+
 // ---- Contratos ----
 
 export function criarContrato({ titulo, descricao, emailCliente, nomeCliente, pdf }) {
@@ -52,8 +68,8 @@ export function criarContrato({ titulo, descricao, emailCliente, nomeCliente, pd
   return api.post('/contratos', formData).then((res) => res.data);
 }
 
-export function meusContratos() {
-  return api.get('/contratos/meus').then((res) => res.data);
+export function meusContratos(page = 0, size = 20) {
+  return api.get('/contratos/meus', { params: { page, size } }).then((res) => res.data);
 }
 
 export function buscarContratoPorId(id) {
@@ -66,6 +82,10 @@ export function buscarContratoPorToken(token) {
 
 export function assinarContrato(token, assinaturaBase64) {
   return api.post(`/contratos/token/${token}/assinar`, { assinaturaBase64 }).then((res) => res.data);
+}
+
+export function rejeitarContrato(token) {
+  return api.post(`/contratos/token/${token}/rejeitar`).then((res) => res.data);
 }
 
 export function urlDownload(id) {

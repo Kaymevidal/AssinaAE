@@ -3,20 +3,23 @@ package com.kayomeira.assinatura.service;
 import com.kayomeira.assinatura.dto.ContratoAssinaturaDTO;
 import com.kayomeira.assinatura.dto.ContratoRequestDTO;
 import com.kayomeira.assinatura.exception.ContratoNotFoundException;
+import com.kayomeira.assinatura.exception.EmailNaoVerificadoException;
 import com.kayomeira.assinatura.exception.PdfInvalidoException;
 import com.kayomeira.assinatura.model.Contrato;
 import com.kayomeira.assinatura.model.Profissional;
 import com.kayomeira.assinatura.model.StatusAssinatura;
 import com.kayomeira.assinatura.repository.ContratoRepository;
+import com.kayomeira.assinatura.service.AssinaturaPDFService.PosicaoAssinatura;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.multipart.MultipartFile;
 
 import java.io.IOException;
 import java.time.LocalDateTime;
-import java.util.List;
 import java.util.UUID;
 
 @Service
@@ -34,6 +37,10 @@ public class ContratoService {
      */
     @Transactional
     public Contrato criarContrato(ContratoRequestDTO dto, MultipartFile pdf, Profissional profissional) throws IOException {
+        if (!profissional.isEmailVerificado()) {
+            throw new EmailNaoVerificadoException("Confirme seu email antes de enviar contratos");
+        }
+
         byte[] pdfBytes = pdf.getBytes();
 
         if (!assinaturaPDFService.validarPDF(pdfBytes)) {
@@ -78,8 +85,8 @@ public class ContratoService {
 
     /** Lista os contratos criados pelo profissional autenticado, mais recentes primeiro. */
     @Transactional(readOnly = true)
-    public List<Contrato> buscarPorProfissional(Long profissionalId) {
-        return contratoRepository.findByProfissionalIdOrderByDataCriacaoDesc(profissionalId);
+    public Page<Contrato> buscarPorProfissional(Long profissionalId, Pageable pageable) {
+        return contratoRepository.findByProfissionalIdOrderByDataCriacaoDesc(profissionalId, pageable);
     }
 
     /**
@@ -119,15 +126,23 @@ public class ContratoService {
         boolean isProfissional = token.equals(contrato.getTokenProfissional());
 
         StatusAssinatura statusAtual = isProfissional ? contrato.getStatusProfissional() : contrato.getStatusCliente();
+        StatusAssinatura statusOutraParte = isProfissional ? contrato.getStatusCliente() : contrato.getStatusProfissional();
+
         if (statusAtual == StatusAssinatura.ASSINADO) {
             throw new IllegalStateException("Esta parte já assinou o contrato");
         }
+        if (statusAtual == StatusAssinatura.REJEITADO) {
+            throw new IllegalStateException("Você já recusou este contrato");
+        }
+        if (statusOutraParte == StatusAssinatura.REJEITADO) {
+            throw new IllegalStateException("A outra parte recusou este contrato — não é mais possível assinar");
+        }
 
         byte[] pdfBase = contrato.getPdfAssinado() != null ? contrato.getPdfAssinado() : contrato.getPdfOriginal();
-        float posicaoX = isProfissional ? 50 : 350;
+        PosicaoAssinatura posicao = isProfissional ? PosicaoAssinatura.ESQUERDA : PosicaoAssinatura.DIREITA;
         String nomeSignatario = isProfissional ? contrato.getProfissional().getNome() : contrato.getNomeCliente();
 
-        contrato.setPdfAssinado(assinaturaPDFService.adicionarAssinatura(pdfBase, assinaturaBase64, posicaoX, 300, nomeSignatario));
+        contrato.setPdfAssinado(assinaturaPDFService.adicionarAssinatura(pdfBase, assinaturaBase64, posicao, nomeSignatario));
 
         if (isProfissional) {
             contrato.setStatusProfissional(StatusAssinatura.ASSINADO);
@@ -146,6 +161,38 @@ public class ContratoService {
 
         Contrato salvo = contratoRepository.save(contrato);
         String papel = isProfissional ? "PROFISSIONAL" : "CLIENTE";
+        return ContratoAssinaturaDTO.fromEntity(salvo, papel);
+    }
+
+    /**
+     * Recusa o contrato em nome de quem acessou com aquele token. Uma vez
+     * recusado por uma das partes, a outra não consegue mais assinar
+     * (checado em {@link #assinar}).
+     */
+    @Transactional
+    public ContratoAssinaturaDTO rejeitar(String token) {
+        Contrato contrato = buscarContratoPorTokenOuFalhar(token);
+        boolean isProfissional = token.equals(contrato.getTokenProfissional());
+        StatusAssinatura statusAtual = isProfissional ? contrato.getStatusProfissional() : contrato.getStatusCliente();
+
+        if (statusAtual == StatusAssinatura.ASSINADO) {
+            throw new IllegalStateException("Esta parte já assinou o contrato, não é possível recusar");
+        }
+        if (statusAtual == StatusAssinatura.REJEITADO) {
+            throw new IllegalStateException("Você já recusou este contrato");
+        }
+
+        if (isProfissional) {
+            contrato.setStatusProfissional(StatusAssinatura.REJEITADO);
+        } else {
+            contrato.setStatusCliente(StatusAssinatura.REJEITADO);
+        }
+
+        Contrato salvo = contratoRepository.save(contrato);
+        String papel = isProfissional ? "PROFISSIONAL" : "CLIENTE";
+        emailService.notificarContratoRecusado(salvo, papel);
+        log.info("Contrato recusado: id={}, papel={}", salvo.getId(), papel);
+
         return ContratoAssinaturaDTO.fromEntity(salvo, papel);
     }
 

@@ -41,7 +41,17 @@ export function AuthProvider({ children }) {
   }
 
   return (
-    <AuthContext.Provider value={{ profissional, autenticado: !!profissional, entrar, registrar, entrarComGoogle, sair }}>
+    <AuthContext.Provider
+      value={{
+        profissional,
+        autenticado: !!profissional,
+        entrar,
+        registrar,
+        entrarComGoogle,
+        entrarComSessao: salvarSessao,
+        sair,
+      }}
+    >
       {children}
     </AuthContext.Provider>
   );

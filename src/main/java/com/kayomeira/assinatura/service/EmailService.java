@@ -1,6 +1,7 @@
 package com.kayomeira.assinatura.service;
 
 import com.kayomeira.assinatura.model.Contrato;
+import com.kayomeira.assinatura.model.Profissional;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
@@ -97,6 +98,76 @@ public class EmailService {
         }
     }
     
+    /**
+     * Notifica a outra parte que o contrato foi recusado por uma delas.
+     */
+    public void notificarContratoRecusado(Contrato contrato, String papelQueRecusou) {
+        boolean recusadoPeloProfissional = "PROFISSIONAL".equals(papelQueRecusou);
+        String emailDestino = recusadoPeloProfissional ? contrato.getEmailCliente() : contrato.getProfissional().getEmail();
+        String nomeQuemRecusou = recusadoPeloProfissional ? contrato.getProfissional().getNome() : contrato.getNomeCliente();
+
+        try {
+            SimpleMailMessage message = new SimpleMailMessage();
+            message.setFrom(emailFrom);
+            message.setTo(emailDestino);
+            message.setSubject("Contrato recusado - " + contrato.getTitulo());
+            message.setText("Olá,\n\n" +
+                    nomeQuemRecusou + " recusou o contrato \"" + contrato.getTitulo() + "\".\n\n" +
+                    "Nenhuma outra ação é necessária.\n\n" +
+                    "Atenciosamente,\nPlataforma de Assinatura Digital");
+
+            mailSender.send(message);
+            log.info("Notificação de recusa enviada para: {}", emailDestino);
+        } catch (Exception e) {
+            log.error("Erro ao enviar notificação de recusa", e);
+        }
+    }
+
+    /**
+     * Envia o link de confirmação de email no cadastro por senha.
+     */
+    public void enviarEmailVerificacao(Profissional profissional) {
+        try {
+            SimpleMailMessage message = new SimpleMailMessage();
+            message.setFrom(emailFrom);
+            message.setTo(profissional.getEmail());
+            message.setSubject("Confirme seu email - Assinatura Digital");
+            message.setText("Olá " + profissional.getNome() + ",\n\n" +
+                    "Confirme seu email para poder enviar contratos:\n" +
+                    frontendUrl + "/verificar-email/" + profissional.getTokenVerificacaoEmail() + "\n\n" +
+                    "Se você não criou essa conta, ignore este email.\n\n" +
+                    "Atenciosamente,\nPlataforma de Assinatura Digital");
+
+            mailSender.send(message);
+            log.info("Email de verificação enviado para: {}", profissional.getEmail());
+        } catch (Exception e) {
+            log.error("Erro ao enviar email de verificação", e);
+        }
+    }
+
+    /**
+     * Envia o link de redefinição de senha. Quem chama já decidiu que o
+     * email existe e tem senha cadastrada — aqui é só o envio em si.
+     */
+    public void enviarEmailResetSenha(Profissional profissional) {
+        try {
+            SimpleMailMessage message = new SimpleMailMessage();
+            message.setFrom(emailFrom);
+            message.setTo(profissional.getEmail());
+            message.setSubject("Redefinição de senha - Assinatura Digital");
+            message.setText("Olá " + profissional.getNome() + ",\n\n" +
+                    "Recebemos um pedido para redefinir sua senha. O link abaixo é válido por 1 hora:\n" +
+                    frontendUrl + "/redefinir-senha/" + profissional.getTokenResetSenha() + "\n\n" +
+                    "Se você não pediu isso, ignore este email — sua senha continua a mesma.\n\n" +
+                    "Atenciosamente,\nPlataforma de Assinatura Digital");
+
+            mailSender.send(message);
+            log.info("Email de redefinição de senha enviado para: {}", profissional.getEmail());
+        } catch (Exception e) {
+            log.error("Erro ao enviar email de redefinição de senha", e);
+        }
+    }
+
     // ============ Métodos auxiliares ============
     
     private String gerarCorpoEmailProfissional(Contrato contrato) {

@@ -18,7 +18,7 @@ export default function Login() {
     setEnviando(true);
     try {
       await entrar({ email, senha });
-      navigate('/dashboard');
+      navigate('/');
     } catch (e) {
       setErro(e.response?.data?.erro || 'Não foi possível entrar');
     } finally {
@@ -30,7 +30,7 @@ export default function Login() {
     setErro('');
     try {
       await entrarComGoogle(credential);
-      navigate('/dashboard');
+      navigate('/');
     } catch (e) {
       setErro(e.response?.data?.erro || 'Não foi possível entrar com o Google');
     }
@@ -48,6 +48,7 @@ export default function Login() {
           Senha
           <input type="password" value={senha} onChange={(e) => setSenha(e.target.value)} required />
         </label>
+        <Link to="/esqueci-senha" className="link-discreto">Esqueci minha senha</Link>
 
         {erro && <p className="erro">{erro}</p>}
 

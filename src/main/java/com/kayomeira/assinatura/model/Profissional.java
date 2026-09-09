@@ -35,4 +35,17 @@ public class Profissional {
 
     @Column(nullable = false, updatable = false)
     private LocalDateTime dataCriacao = LocalDateTime.now();
+
+    /** Contas via Google já nascem verificadas (o Google confirma o email); via senha, precisa confirmar. */
+    @Column(nullable = false)
+    @Builder.Default
+    private boolean emailVerificado = false;
+
+    @Column(unique = true)
+    private String tokenVerificacaoEmail;
+
+    @Column(unique = true)
+    private String tokenResetSenha;
+
+    private LocalDateTime tokenResetExpiracao;
 }
