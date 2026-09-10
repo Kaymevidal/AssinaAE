@@ -35,7 +35,7 @@ class AuthServiceTest {
     @BeforeEach
     void setUp() {
         MockitoAnnotations.openMocks(this);
-        authService = new AuthService(profissionalRepository, passwordEncoder, jwtService, new EmailService(null), "");
+        authService = new AuthService(profissionalRepository, passwordEncoder, jwtService, new EmailService(), "");
         when(profissionalRepository.save(any(Profissional.class))).thenAnswer(inv -> {
             Profissional p = inv.getArgument(0);
             p.setId(1L);

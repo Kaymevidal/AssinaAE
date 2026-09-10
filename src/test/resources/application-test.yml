@@ -13,15 +13,10 @@ spring:
   flyway:
     enabled: false
 
-  mail:
-    host: localhost
-    port: 3025
-    username: teste
-    password: teste
-    from: teste@teste.com
-
 app:
   frontend-url: http://localhost:3000
   jwt-secret: segredo-de-teste-com-pelo-menos-32-caracteres-0123456789
   jwt-expiracao-dias: 7
   google-client-id: ""
+  mail-from: teste@teste.com
+  sendgrid-api-key: ""

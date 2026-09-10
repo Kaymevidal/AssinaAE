@@ -25,26 +25,6 @@ spring:
   flyway:
     enabled: true
 
-  mail:
-    host: ${MAIL_HOST:smtp.gmail.com}
-    port: ${MAIL_PORT:587}
-    username: ${MAIL_USERNAME:seu-email@gmail.com}
-    password: ${MAIL_PASSWORD:sua-senha-de-app}
-    from: ${MAIL_FROM:seu-email@gmail.com}
-    properties:
-      mail:
-        smtp:
-          auth: true
-          starttls:
-            enable: true
-          # Sem isso, uma trava no SMTP (rede, firewall, provedor fora do ar)
-          # pendura a requisição HTTP inteira pra sempre — o envio de email já
-          # é best-effort em todo o EmailService, mas só se ele conseguir
-          # falhar rápido em vez de travar.
-          connectiontimeout: 5000
-          timeout: 5000
-          writetimeout: 5000
-
   servlet:
     multipart:
       max-file-size: 10MB
@@ -58,14 +38,6 @@ management:
   endpoint:
     health:
       show-details: never
-  health:
-    # O indicador padrão de mail testa a conexão SMTP de verdade a cada
-    # checagem de saúde — uma falha de SMTP (fora do ar, credenciais erradas)
-    # não pode derrubar o healthcheck do container, já que o envio de email
-    # já é tratado como best-effort em toda a aplicação (EmailService nunca
-    # propaga essas falhas).
-    mail:
-      enabled: false
 
 app:
   frontend-url: ${FRONTEND_URL:http://localhost:3000}
@@ -74,6 +46,9 @@ app:
   jwt-expiracao-dias: ${JWT_EXPIRACAO_DIAS:7}
   # Client ID do OAuth do Google (Google Cloud Console), usado para validar o login com Google.
   google-client-id: ${GOOGLE_CLIENT_ID:}
+  # Email por API HTTP (SendGrid) em vez de SMTP — ver EmailService.
+  mail-from: ${MAIL_FROM:seu-email@exemplo.com}
+  sendgrid-api-key: ${SENDGRID_API_KEY:}
 
 logging:
   level:

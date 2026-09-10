@@ -30,7 +30,7 @@ class ContratoServiceOwnershipTest {
     @BeforeEach
     void setUp() {
         MockitoAnnotations.openMocks(this);
-        contratoService = new ContratoService(contratoRepository, new AssinaturaPDFService(), new EmailService(null));
+        contratoService = new ContratoService(contratoRepository, new AssinaturaPDFService(), new EmailService());
     }
 
     @Test
