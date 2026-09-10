@@ -1,5 +1,10 @@
 {
   "installCommand": "npm install --prefix src/frontend",
   "buildCommand": "npm run build --prefix src/frontend",
-  "outputDirectory": "src/frontend/dist"
+  "outputDirectory": "src/frontend/dist",
+  "build": {
+    "env": {
+      "VITE_API_URL": "https://assinatura-digital-production-b830.up.railway.app/api"
+    }
+  }
 }
