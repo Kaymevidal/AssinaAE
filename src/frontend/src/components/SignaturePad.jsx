@@ -17,9 +17,14 @@ export default function SignaturePad({ onChange }) {
     const canvas = canvasRef.current;
     const rect = canvas.getBoundingClientRect();
     const ponto = evento.touches ? evento.touches[0] : evento;
+    // O canvas tem resolução interna fixa (400x180), mas a CSS encolhe ele
+    // pra caber em telas menores (celular) — sem essa escala, o traço fica
+    // desalinhado de onde o dedo/mouse realmente está.
+    const escalaX = rect.width ? canvas.width / rect.width : 1;
+    const escalaY = rect.height ? canvas.height / rect.height : 1;
     return {
-      x: ponto.clientX - rect.left,
-      y: ponto.clientY - rect.top,
+      x: (ponto.clientX - rect.left) * escalaX,
+      y: (ponto.clientY - rect.top) * escalaY,
     };
   }
 
