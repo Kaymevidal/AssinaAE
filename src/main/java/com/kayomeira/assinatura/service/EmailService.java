@@ -32,7 +32,7 @@ public class EmailService {
     public void enviarLinkAssinaturaProfissional(Contrato contrato) {
         try {
             SimpleMailMessage message = new SimpleMailMessage();
-            message.setFrom(emailFrom);
+            message.setFrom(remetente());
             message.setTo(contrato.getProfissional().getEmail());
             message.setSubject("Novo contrato aguardando sua assinatura - " + contrato.getTitulo());
             message.setText(gerarCorpoEmailProfissional(contrato));
@@ -50,7 +50,8 @@ public class EmailService {
     public void enviarLinkAssinaturaCliente(Contrato contrato) {
         try {
             SimpleMailMessage message = new SimpleMailMessage();
-            message.setFrom(emailFrom);
+            message.setFrom(remetente());
+            message.setReplyTo(contrato.getProfissional().getEmail());
             message.setTo(contrato.getEmailCliente());
             message.setSubject("Novo contrato aguardando sua assinatura - " + contrato.getTitulo());
             message.setText(gerarCorpoEmailCliente(contrato));
@@ -66,8 +67,8 @@ public class EmailService {
      * Notifica que o contrato foi totalmente assinado
      */
     public void notificarContratoAssinado(Contrato contrato) {
-        enviarNotificacaoAssinado(contrato.getProfissional().getEmail(), contrato.getTokenProfissional(), contrato);
-        enviarNotificacaoAssinado(contrato.getEmailCliente(), contrato.getTokenCliente(), contrato);
+        enviarNotificacaoAssinado(contrato.getProfissional().getEmail(), contrato.getEmailCliente(), contrato.getTokenProfissional(), contrato);
+        enviarNotificacaoAssinado(contrato.getEmailCliente(), contrato.getProfissional().getEmail(), contrato.getTokenCliente(), contrato);
     }
     
     /**
@@ -77,8 +78,12 @@ public class EmailService {
         try {
             MimeMessage message = mailSender.createMimeMessage();
             MimeMessageHelper helper = new MimeMessageHelper(message, true);
-            
-            helper.setFrom(emailFrom);
+
+            boolean paraProfissional = email.equals(contrato.getProfissional().getEmail());
+            String emailOutraParte = paraProfissional ? contrato.getEmailCliente() : contrato.getProfissional().getEmail();
+
+            helper.setFrom(remetente());
+            helper.setReplyTo(emailOutraParte);
             helper.setTo(email);
             helper.setSubject("Contrato assinado - " + contrato.getTitulo());
             helper.setText(gerarCorpoEmailPDFAssinado(contrato));
@@ -104,11 +109,13 @@ public class EmailService {
     public void notificarContratoRecusado(Contrato contrato, String papelQueRecusou) {
         boolean recusadoPeloProfissional = "PROFISSIONAL".equals(papelQueRecusou);
         String emailDestino = recusadoPeloProfissional ? contrato.getEmailCliente() : contrato.getProfissional().getEmail();
+        String emailQuemRecusou = recusadoPeloProfissional ? contrato.getProfissional().getEmail() : contrato.getEmailCliente();
         String nomeQuemRecusou = recusadoPeloProfissional ? contrato.getProfissional().getNome() : contrato.getNomeCliente();
 
         try {
             SimpleMailMessage message = new SimpleMailMessage();
-            message.setFrom(emailFrom);
+            message.setFrom(remetente());
+            message.setReplyTo(emailQuemRecusou);
             message.setTo(emailDestino);
             message.setSubject("Contrato recusado - " + contrato.getTitulo());
             message.setText("Olá,\n\n" +
@@ -129,7 +136,7 @@ public class EmailService {
     public void enviarEmailVerificacao(Profissional profissional) {
         try {
             SimpleMailMessage message = new SimpleMailMessage();
-            message.setFrom(emailFrom);
+            message.setFrom(remetente());
             message.setTo(profissional.getEmail());
             message.setSubject("Confirme seu email - Assinatura Digital");
             message.setText("Olá " + profissional.getNome() + ",\n\n" +
@@ -152,7 +159,7 @@ public class EmailService {
     public void enviarEmailResetSenha(Profissional profissional) {
         try {
             SimpleMailMessage message = new SimpleMailMessage();
-            message.setFrom(emailFrom);
+            message.setFrom(remetente());
             message.setTo(profissional.getEmail());
             message.setSubject("Redefinição de senha - Assinatura Digital");
             message.setText("Olá " + profissional.getNome() + ",\n\n" +
@@ -169,6 +176,15 @@ public class EmailService {
     }
 
     // ============ Métodos auxiliares ============
+
+    /**
+     * "De:" com nome amigável — o endereço técnico continua sendo o
+     * verificado no provedor de email (SendGrid/etc.), mas quem recebe vê
+     * "Assinatura Digital" em vez do endereço cru.
+     */
+    private String remetente() {
+        return "Assinatura Digital <" + emailFrom + ">";
+    }
     
     private String gerarCorpoEmailProfissional(Contrato contrato) {
         return "Olá " + contrato.getProfissional().getNome() + ",\n\n" +
@@ -192,10 +208,11 @@ public class EmailService {
                 "Atenciosamente,\nPlataforma de Assinatura Digital";
     }
     
-    private void enviarNotificacaoAssinado(String email, String token, Contrato contrato) {
+    private void enviarNotificacaoAssinado(String email, String emailOutraParte, String token, Contrato contrato) {
         try {
             SimpleMailMessage message = new SimpleMailMessage();
-            message.setFrom(emailFrom);
+            message.setFrom(remetente());
+            message.setReplyTo(emailOutraParte);
             message.setTo(email);
             message.setSubject("✓ Contrato totalmente assinado - " + contrato.getTitulo());
             message.setText("Parabéns!\n\n" +
