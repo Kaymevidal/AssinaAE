@@ -1,0 +1,6 @@
+target/
+src/frontend/
+src/test/
+.git/
+.github/
+*.md

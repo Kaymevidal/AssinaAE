@@ -1,5 +1,5 @@
 server:
-  port: 8080
+  port: ${PORT:8080}
 
 spring:
   application:
@@ -42,6 +42,23 @@ spring:
     multipart:
       max-file-size: 10MB
       max-request-size: 10MB
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health
+  endpoint:
+    health:
+      show-details: never
+  health:
+    # O indicador padrão de mail testa a conexão SMTP de verdade a cada
+    # checagem de saúde — uma falha de SMTP (fora do ar, credenciais erradas)
+    # não pode derrubar o healthcheck do container, já que o envio de email
+    # já é tratado como best-effort em toda a aplicação (EmailService nunca
+    # propaga essas falhas).
+    mail:
+      enabled: false
 
 app:
   frontend-url: ${FRONTEND_URL:http://localhost:3000}
