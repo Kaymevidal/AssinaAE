@@ -37,6 +37,13 @@ spring:
           auth: true
           starttls:
             enable: true
+          # Sem isso, uma trava no SMTP (rede, firewall, provedor fora do ar)
+          # pendura a requisição HTTP inteira pra sempre — o envio de email já
+          # é best-effort em todo o EmailService, mas só se ele conseguir
+          # falhar rápido em vez de travar.
+          connectiontimeout: 5000
+          timeout: 5000
+          writetimeout: 5000
 
   servlet:
     multipart:
