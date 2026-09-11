@@ -55,6 +55,12 @@ public class ContratoController {
         return ResponseEntity.ok(ContratoResponseDTO.fromEntity(contrato));
     }
 
+    @DeleteMapping("/{id}")
+    public ResponseEntity<Void> excluir(@PathVariable Long id, @AuthenticationPrincipal Profissional profissional) {
+        contratoService.excluirContrato(id, profissional.getId());
+        return ResponseEntity.noContent().build();
+    }
+
     @GetMapping("/{id}/download")
     public ResponseEntity<byte[]> download(@PathVariable Long id, @AuthenticationPrincipal Profissional profissional) {
         Contrato contrato = contratoService.buscarPorIdDoProfissional(id, profissional.getId());

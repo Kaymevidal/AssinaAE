@@ -82,6 +82,14 @@ public class ContratoService {
         return contrato;
     }
 
+    /** Exclui o contrato, se pertencer ao profissional autenticado (mesma checagem de {@link #buscarPorIdDoProfissional}). */
+    @Transactional
+    public void excluirContrato(Long id, Long profissionalId) {
+        Contrato contrato = buscarPorIdDoProfissional(id, profissionalId);
+        contratoRepository.delete(contrato);
+        log.info("Contrato excluído: id={}", id);
+    }
+
     /** Lista os contratos criados pelo profissional autenticado, mais recentes primeiro. */
     @Transactional(readOnly = true)
     public Page<Contrato> buscarPorProfissional(Long profissionalId, Pageable pageable) {

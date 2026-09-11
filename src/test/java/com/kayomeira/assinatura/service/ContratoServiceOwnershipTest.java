@@ -13,6 +13,8 @@ import java.util.Optional;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
+import static org.mockito.Mockito.never;
+import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 /**
@@ -50,5 +52,28 @@ class ContratoServiceOwnershipTest {
 
         assertThatThrownBy(() -> contratoService.buscarPorIdDoProfissional(10L, 2L))
                 .isInstanceOf(ContratoNotFoundException.class);
+    }
+
+    @Test
+    void profissionalDonoConsegueExcluirOProprioContrato() {
+        Profissional dono = Profissional.builder().id(1L).nome("Ana").email("ana@teste.com").build();
+        Contrato contrato = Contrato.builder().id(10L).profissional(dono).build();
+        when(contratoRepository.findById(10L)).thenReturn(Optional.of(contrato));
+
+        contratoService.excluirContrato(10L, 1L);
+
+        verify(contratoRepository).delete(contrato);
+    }
+
+    @Test
+    void profissionalDiferenteNaoConsegueExcluirContratoAlheio() {
+        Profissional dono = Profissional.builder().id(1L).nome("Ana").email("ana@teste.com").build();
+        Contrato contrato = Contrato.builder().id(10L).profissional(dono).build();
+        when(contratoRepository.findById(10L)).thenReturn(Optional.of(contrato));
+
+        assertThatThrownBy(() -> contratoService.excluirContrato(10L, 2L))
+                .isInstanceOf(ContratoNotFoundException.class);
+
+        verify(contratoRepository, never()).delete(contrato);
     }
 }

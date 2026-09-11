@@ -76,6 +76,10 @@ export function buscarContratoPorId(id) {
   return api.get(`/contratos/${id}`).then((res) => res.data);
 }
 
+export function excluirContrato(id) {
+  return api.delete(`/contratos/${id}`);
+}
+
 export function buscarContratoPorToken(token) {
   return api.get(`/contratos/token/${token}`).then((res) => res.data);
 }

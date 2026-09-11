@@ -1,16 +1,53 @@
 import { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
-import { meusContratos, reenviarVerificacao } from '../services/api';
+import { excluirContrato, meusContratos, reenviarVerificacao } from '../services/api';
 import { useAuth } from '../context/AuthContext';
 
-function ItemContrato({ contrato }) {
+function IconeLixeira() {
+  return (
+    <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+      <polyline points="3 6 5 6 21 6" />
+      <path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2" />
+      <line x1="10" y1="11" x2="10" y2="17" />
+      <line x1="14" y1="11" x2="14" y2="17" />
+    </svg>
+  );
+}
+
+function ItemContrato({ contrato, onExcluir }) {
+  const [excluindo, setExcluindo] = useState(false);
+
+  async function excluir() {
+    if (!window.confirm(`Tem certeza que quer excluir o contrato "${contrato.titulo}"? Essa ação não pode ser desfeita.`)) return;
+
+    setExcluindo(true);
+    try {
+      await onExcluir(contrato.id);
+    } catch {
+      setExcluindo(false);
+      window.alert('Não foi possível excluir o contrato. Tente novamente.');
+    }
+  }
+
   return (
     <li className="painel__item">
       <div>
         <strong>{contrato.titulo}</strong>
         <span className="painel__cliente"> · cliente: {contrato.nomeCliente}</span>
       </div>
-      <Link to={`/contratos/${contrato.id}`}>Ver detalhes</Link>
+      <div className="painel__item__acoes">
+        <Link to={`/contratos/${contrato.id}`}>Ver detalhes</Link>
+        <button
+          type="button"
+          className="painel__excluir"
+          onClick={excluir}
+          disabled={excluindo}
+          aria-label="Excluir contrato"
+          title="Excluir contrato"
+        >
+          <IconeLixeira />
+        </button>
+      </div>
     </li>
   );
 }
@@ -49,6 +86,11 @@ export default function PainelProfissional() {
       .catch(() => setErro('Não foi possível carregar seus contratos'));
   }, [numeroPagina]);
 
+  async function removerContrato(id) {
+    await excluirContrato(id);
+    setPagina((atual) => ({ ...atual, content: atual.content.filter((c) => c.id !== id) }));
+  }
+
   if (erro) return <div className="card erro">{erro}</div>;
   if (!pagina) return <div className="card">Carregando...</div>;
 
@@ -72,7 +114,7 @@ export default function PainelProfissional() {
         <p className="painel__vazio">Nenhum contrato em andamento.</p>
       ) : (
         <ul className="painel__lista">
-          {emAndamento.map((c) => <ItemContrato key={c.id} contrato={c} />)}
+          {emAndamento.map((c) => <ItemContrato key={c.id} contrato={c} onExcluir={removerContrato} />)}
         </ul>
       )}
 
@@ -81,7 +123,7 @@ export default function PainelProfissional() {
         <p className="painel__vazio">Nenhum contrato assinado ainda.</p>
       ) : (
         <ul className="painel__lista">
-          {assinados.map((c) => <ItemContrato key={c.id} contrato={c} />)}
+          {assinados.map((c) => <ItemContrato key={c.id} contrato={c} onExcluir={removerContrato} />)}
         </ul>
       )}
 
@@ -90,7 +132,7 @@ export default function PainelProfissional() {
         <p className="painel__vazio">Nenhum contrato recusado.</p>
       ) : (
         <ul className="painel__lista">
-          {recusados.map((c) => <ItemContrato key={c.id} contrato={c} />)}
+          {recusados.map((c) => <ItemContrato key={c.id} contrato={c} onExcluir={removerContrato} />)}
         </ul>
       )}
 

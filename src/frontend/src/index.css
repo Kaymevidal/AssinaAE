@@ -201,6 +201,28 @@ button:disabled {
   font-weight: 400;
 }
 
+.painel__item__acoes {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  flex-shrink: 0;
+}
+
+.painel__excluir {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 6px;
+  background: transparent;
+  color: #b91c1c;
+  border: none;
+  border-radius: 6px;
+}
+
+.painel__excluir:hover:not(:disabled) {
+  background: #fef2f2;
+}
+
 .painel__vazio {
   color: #6b7280;
   font-size: 0.9rem;
