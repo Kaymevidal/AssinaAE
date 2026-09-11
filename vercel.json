@@ -4,7 +4,8 @@
   "outputDirectory": "src/frontend/dist",
   "build": {
     "env": {
-      "VITE_API_URL": "https://assinatura-digital-production-b830.up.railway.app/api"
+      "VITE_API_URL": "https://assinatura-digital-production-b830.up.railway.app/api",
+      "VITE_GOOGLE_CLIENT_ID": "558878261587-immq9soma6sj3pbn6t82r1tbpbjces34.apps.googleusercontent.com"
     }
   },
   "rewrites": [
