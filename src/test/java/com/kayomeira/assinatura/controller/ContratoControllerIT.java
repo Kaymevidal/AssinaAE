@@ -118,13 +118,13 @@ class ContratoControllerIT {
 
         mockMvc.perform(post("/api/contratos/token/{token}/assinar", tokenCliente)
                         .contentType("application/json")
-                        .content("{\"assinaturaBase64\":\"" + ASSINATURA_BASE64 + "\"}"))
+                        .content("{\"assinaturaBase64\":\"" + ASSINATURA_BASE64 + "\",\"pagina\":0,\"x\":0.1,\"y\":0.8,\"largura\":0.3,\"altura\":0.1}"))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.ambosAssinaram").value(false));
 
         mockMvc.perform(post("/api/contratos/token/{token}/assinar", tokenProfissional)
                         .contentType("application/json")
-                        .content("{\"assinaturaBase64\":\"" + ASSINATURA_BASE64 + "\"}"))
+                        .content("{\"assinaturaBase64\":\"" + ASSINATURA_BASE64 + "\",\"pagina\":0,\"x\":0.1,\"y\":0.8,\"largura\":0.3,\"altura\":0.1}"))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.ambosAssinaram").value(true));
 
@@ -147,7 +147,7 @@ class ContratoControllerIT {
 
         mockMvc.perform(post("/api/contratos/token/{token}/assinar", contrato.getTokenProfissional())
                         .contentType("application/json")
-                        .content("{\"assinaturaBase64\":\"" + ASSINATURA_BASE64 + "\"}"))
+                        .content("{\"assinaturaBase64\":\"" + ASSINATURA_BASE64 + "\",\"pagina\":0,\"x\":0.1,\"y\":0.8,\"largura\":0.3,\"altura\":0.1}"))
                 .andExpect(status().isConflict());
     }
 }

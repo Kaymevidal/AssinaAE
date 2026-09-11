@@ -1,7 +1,8 @@
 import { useEffect, useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
-import { assinarContrato, buscarContratoPorToken, rejeitarContrato } from '../services/api';
+import { assinarContrato, buscarContratoPorToken, buscarPdfPreviewPorToken, rejeitarContrato } from '../services/api';
 import SignaturePad from '../components/SignaturePad';
+import PosicionadorAssinatura, { caixaPadrao, ULTIMA_PAGINA_SENTINELA } from '../components/PosicionadorAssinatura';
 
 export default function AssinarContrato() {
   const { token } = useParams();
@@ -11,6 +12,8 @@ export default function AssinarContrato() {
   const [carregando, setCarregando] = useState(true);
   const [erro, setErro] = useState('');
   const [assinatura, setAssinatura] = useState(null);
+  const [pdfPreview, setPdfPreview] = useState(null);
+  const [posicao, setPosicao] = useState(null);
   const [assinando, setAssinando] = useState(false);
   const [recusando, setRecusando] = useState(false);
 
@@ -21,16 +24,32 @@ export default function AssinarContrato() {
       .finally(() => setCarregando(false));
   }, [token]);
 
+  useEffect(() => {
+    if (!contrato || contrato.statusPapel !== 'PENDENTE') return;
+    buscarPdfPreviewPorToken(token)
+      .then((bytes) => setPdfPreview(new Uint8Array(bytes)))
+      .catch(() => {
+        // Sem pré-visualização não dá pra posicionar visualmente, mas a assinatura
+        // ainda pode ser confirmada numa posição padrão.
+        setPdfPreview(null);
+        setPosicao({ pagina: ULTIMA_PAGINA_SENTINELA, ...caixaPadrao(contrato.papel === 'CLIENTE') });
+      });
+  }, [contrato, token]);
+
   async function confirmarAssinatura() {
     if (!assinatura) {
       setErro('Desenhe sua assinatura antes de confirmar');
+      return;
+    }
+    if (!posicao) {
+      setErro('Aguarde o carregamento do PDF antes de confirmar');
       return;
     }
 
     setAssinando(true);
     setErro('');
     try {
-      const atualizado = await assinarContrato(token, assinatura);
+      const atualizado = await assinarContrato(token, assinatura, posicao);
       setContrato(atualizado);
       if (atualizado.ambosAssinaram) {
         navigate(`/download/${token}`);
@@ -80,6 +99,19 @@ export default function AssinarContrato() {
         <>
           <p>Assine abaixo, {nomeSignatario}:</p>
           <SignaturePad onChange={setAssinatura} />
+
+          {assinatura && pdfPreview && (
+            <>
+              <p>Agora posicione sua assinatura no documento:</p>
+              <PosicionadorAssinatura
+                pdfBytes={pdfPreview}
+                assinaturaBase64={assinatura}
+                ladoInicialDireito={contrato.papel === 'CLIENTE'}
+                onChange={setPosicao}
+              />
+            </>
+          )}
+
           {erro && <p className="erro">{erro}</p>}
           <div className="acoes-lado-a-lado">
             <button type="button" onClick={confirmarAssinatura} disabled={assinando || recusando}>

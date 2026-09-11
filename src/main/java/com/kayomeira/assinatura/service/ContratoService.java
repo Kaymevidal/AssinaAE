@@ -9,7 +9,6 @@ import com.kayomeira.assinatura.model.Contrato;
 import com.kayomeira.assinatura.model.Profissional;
 import com.kayomeira.assinatura.model.StatusAssinatura;
 import com.kayomeira.assinatura.repository.ContratoRepository;
-import com.kayomeira.assinatura.service.AssinaturaPDFService.PosicaoAssinatura;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.domain.Page;
@@ -111,6 +110,17 @@ public class ContratoService {
     }
 
     /**
+     * PDF no estado atual (original, ou já com a assinatura da outra parte)
+     * para quem ainda vai assinar poder visualizar e posicionar a própria
+     * assinatura antes de confirmar. Público, pelo próprio link de token.
+     */
+    @Transactional(readOnly = true)
+    public byte[] visualizarPdfPorToken(String token) {
+        Contrato contrato = buscarContratoPorTokenOuFalhar(token);
+        return contrato.getPdfAssinado() != null ? contrato.getPdfAssinado() : contrato.getPdfOriginal();
+    }
+
+    /**
      * Registra a assinatura da parte associada ao token, embutindo a imagem
      * no PDF imediatamente (em cima do PDF original, ou do já parcialmente
      * assinado pela outra parte). Quando ambas as partes já tiverem
@@ -121,7 +131,14 @@ public class ContratoService {
      * de assinatura em base64 da entidade são @Transient (não persistidos).
      */
     @Transactional
-    public ContratoAssinaturaDTO assinar(String token, String assinaturaBase64) throws IOException {
+    public ContratoAssinaturaDTO assinar(
+            String token,
+            String assinaturaBase64,
+            int pagina,
+            float x,
+            float y,
+            float largura,
+            float altura) throws IOException {
         Contrato contrato = buscarContratoPorTokenOuFalhar(token);
         boolean isProfissional = token.equals(contrato.getTokenProfissional());
 
@@ -139,10 +156,10 @@ public class ContratoService {
         }
 
         byte[] pdfBase = contrato.getPdfAssinado() != null ? contrato.getPdfAssinado() : contrato.getPdfOriginal();
-        PosicaoAssinatura posicao = isProfissional ? PosicaoAssinatura.ESQUERDA : PosicaoAssinatura.DIREITA;
         String nomeSignatario = isProfissional ? contrato.getProfissional().getNome() : contrato.getNomeCliente();
 
-        contrato.setPdfAssinado(assinaturaPDFService.adicionarAssinatura(pdfBase, assinaturaBase64, posicao, nomeSignatario));
+        contrato.setPdfAssinado(assinaturaPDFService.adicionarAssinatura(
+                pdfBase, assinaturaBase64, pagina, x, y, largura, altura, nomeSignatario));
 
         if (isProfissional) {
             contrato.setStatusProfissional(StatusAssinatura.ASSINADO);

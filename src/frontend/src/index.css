@@ -248,6 +248,86 @@ button:disabled {
   border: 1px solid #b91c1c;
 }
 
+.login__logo {
+  display: block;
+  height: 48px;
+  width: auto;
+  margin: 0 auto 20px;
+}
+
+.posicionador {
+  margin: 16px 0;
+}
+
+.posicionador__paginacao {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 16px;
+  margin-bottom: 12px;
+  font-size: 0.9rem;
+}
+
+.posicionador__paginacao button {
+  padding: 6px 12px;
+}
+
+.posicionador__carregando {
+  color: #6b7280;
+  font-size: 0.9rem;
+}
+
+.posicionador__pagina {
+  position: relative;
+  display: inline-block;
+  line-height: 0;
+  max-width: 100%;
+  border: 1px solid #e2e4e8;
+  border-radius: 6px;
+  overflow: hidden;
+}
+
+.posicionador__canvas {
+  display: block;
+  max-width: 100%;
+}
+
+.posicionador__assinatura {
+  position: absolute;
+  box-sizing: border-box;
+  border: 1px dashed #2563eb;
+  background: rgba(37, 99, 235, 0.06);
+  cursor: move;
+  touch-action: none;
+}
+
+.posicionador__assinatura img {
+  display: block;
+  width: 100%;
+  height: 100%;
+  pointer-events: none;
+  user-select: none;
+}
+
+.posicionador__redimensionar {
+  position: absolute;
+  right: -6px;
+  bottom: -6px;
+  width: 14px;
+  height: 14px;
+  border-radius: 50%;
+  background: #2563eb;
+  border: 2px solid #fff;
+  cursor: nwse-resize;
+  touch-action: none;
+}
+
+.posicionador__dica {
+  margin-top: 8px;
+  color: #6b7280;
+  font-size: 0.85rem;
+}
+
 @media (max-width: 480px) {
   .app__main {
     margin: 16px auto;

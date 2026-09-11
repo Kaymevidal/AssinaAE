@@ -80,8 +80,18 @@ export function buscarContratoPorToken(token) {
   return api.get(`/contratos/token/${token}`).then((res) => res.data);
 }
 
-export function assinarContrato(token, assinaturaBase64) {
-  return api.post(`/contratos/token/${token}/assinar`, { assinaturaBase64 }).then((res) => res.data);
+export function assinarContrato(token, assinaturaBase64, posicao) {
+  const { pagina, x, y, largura, altura } = posicao;
+  return api
+    .post(`/contratos/token/${token}/assinar`, { assinaturaBase64, pagina, x, y, largura, altura })
+    .then((res) => res.data);
+}
+
+/** PDF no estado atual (ainda sem a assinatura de quem está acessando), para posicionar a assinatura antes de confirmar. */
+export function buscarPdfPreviewPorToken(token) {
+  return api
+    .get(`/contratos/token/${token}/pdf-preview`, { responseType: 'arraybuffer' })
+    .then((res) => res.data);
 }
 
 export function rejeitarContrato(token) {

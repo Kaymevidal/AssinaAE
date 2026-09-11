@@ -76,13 +76,22 @@ public class ContratoController {
     public ResponseEntity<ContratoAssinaturaDTO> assinar(
             @PathVariable String token,
             @Valid @RequestBody AssinaturaRequestDTO dto) throws IOException {
-        return ResponseEntity.ok(contratoService.assinar(token, dto.getAssinaturaBase64()));
+        return ResponseEntity.ok(contratoService.assinar(
+                token, dto.getAssinaturaBase64(), dto.getPagina(), dto.getX(), dto.getY(), dto.getLargura(), dto.getAltura()));
     }
 
     @GetMapping("/token/{token}/download")
     public ResponseEntity<byte[]> downloadPorToken(@PathVariable String token) {
         byte[] pdf = contratoService.baixarPdfPorToken(token);
         return pdfComoAnexo(pdf, "contrato-assinado.pdf");
+    }
+
+    /** Pré-visualização pública do PDF no estado atual, usada para posicionar a assinatura antes de confirmar. */
+    @GetMapping("/token/{token}/pdf-preview")
+    public ResponseEntity<byte[]> previewPorToken(@PathVariable String token) {
+        return ResponseEntity.ok()
+                .contentType(MediaType.APPLICATION_PDF)
+                .body(contratoService.visualizarPdfPorToken(token));
     }
 
     @PostMapping("/token/{token}/rejeitar")

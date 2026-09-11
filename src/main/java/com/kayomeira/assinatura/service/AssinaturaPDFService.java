@@ -19,43 +19,57 @@ import java.time.format.DateTimeFormatter;
 @Slf4j
 public class AssinaturaPDFService {
 
-    /** Em qual metade da última página a assinatura é desenhada. */
-    public enum PosicaoAssinatura { ESQUERDA, DIREITA }
-
     /**
-     * Adiciona assinatura (imagem PNG) ao PDF. A posição e o tamanho são
-     * calculados a partir do MediaBox real da última página — funciona para
-     * A4, Letter ou qualquer tamanho customizado, em vez de coordenadas
-     * fixas que só faziam sentido para um tamanho de página específico.
+     * Adiciona assinatura (imagem PNG) ao PDF, na página e posição escolhidas
+     * por quem assina. Posição e tamanho chegam como frações (0 a 1) da
+     * página — independentes de resolução/zoom — e são convertidas aqui para
+     * pontos usando o MediaBox real da página, o que funciona para A4,
+     * Letter ou qualquer tamanho customizado.
      *
      * @param pdfBytes PDF original em bytes
      * @param assinaturaBase64 Imagem da assinatura em Base64 (PNG)
-     * @param posicao Lado da página onde a assinatura é desenhada
+     * @param pagina Página onde a assinatura é desenhada (0-indexada)
+     * @param x Posição horizontal do canto superior esquerdo, fração da largura da página (0 a 1)
+     * @param y Posição vertical do canto superior esquerdo, fração da altura da página a partir do topo (0 a 1)
+     * @param largura Largura da assinatura, fração da largura da página (0 a 1)
+     * @param altura Altura da assinatura, fração da altura da página (0 a 1)
      * @param nomeSignatario Nome de quem está assinando
      * @return PDF com assinatura adicionada em bytes
      */
     public byte[] adicionarAssinatura(
             byte[] pdfBytes,
             String assinaturaBase64,
-            PosicaoAssinatura posicao,
+            int pagina,
+            float x,
+            float y,
+            float largura,
+            float altura,
             String nomeSignatario) throws IOException {
 
         PDDocument document = Loader.loadPDF(pdfBytes);
 
         try {
             byte[] assinaturaBytes = Base64.decodeBase64(assinaturaBase64);
-            PDPage page = document.getPage(document.getNumberOfPages() - 1);
+            // Página escolhida no cliente pode não bater mais (ex.: PDF trocado) — cai pra última em vez de estourar índice.
+            int indicePagina = pagina >= 0 && pagina < document.getNumberOfPages()
+                    ? pagina
+                    : document.getNumberOfPages() - 1;
+            PDPage page = document.getPage(indicePagina);
             PDRectangle mediaBox = page.getMediaBox();
 
             float larguraPagina = mediaBox.getWidth();
             float alturaPagina = mediaBox.getHeight();
 
-            float larguraAssinatura = Math.min(larguraPagina * 0.28f, 180);
-            float alturaAssinatura = larguraAssinatura * 0.5f;
-            float posicaoY = alturaPagina * 0.08f;
-            float posicaoX = posicao == PosicaoAssinatura.ESQUERDA
-                    ? larguraPagina * 0.08f
-                    : larguraPagina - larguraAssinatura - (larguraPagina * 0.08f);
+            float larguraAssinatura = largura * larguraPagina;
+            float alturaAssinatura = altura * alturaPagina;
+
+            // x/y chegam como fração a partir do canto superior esquerdo (convenção de tela);
+            // PDF usa origem no canto inferior esquerdo, daí a inversão do eixo Y.
+            float posicaoX = clamp(x * larguraPagina, 0, larguraPagina - larguraAssinatura);
+            float posicaoY = clamp(
+                    alturaPagina - (y * alturaPagina) - alturaAssinatura,
+                    0,
+                    alturaPagina - alturaAssinatura);
 
             try (PDPageContentStream contentStream = new PDPageContentStream(
                     document, page, PDPageContentStream.AppendMode.APPEND, true, true)) {
@@ -75,8 +89,11 @@ public class AssinaturaPDFService {
                         .format(DateTimeFormatter.ofPattern("dd/MM/yyyy HH:mm:ss"));
                 String textoAssinatura = "Assinado por: " + nomeSignatario + " em " + dataAssinatura;
 
+                // Texto fica logo abaixo da assinatura; se não houver espaço (assinatura colada no rodapé), vai por cima.
+                float posicaoTextoY = posicaoY - 12 >= 0 ? posicaoY - 12 : posicaoY + alturaAssinatura + 2;
+
                 contentStream.beginText();
-                contentStream.newLineAtOffset(posicaoX, posicaoY - 12);
+                contentStream.newLineAtOffset(posicaoX, posicaoTextoY);
                 contentStream.showText(textoAssinatura);
                 contentStream.endText();
             }
@@ -90,6 +107,11 @@ public class AssinaturaPDFService {
         } finally {
             document.close();
         }
+    }
+
+    private static float clamp(float valor, float min, float max) {
+        if (max < min) return min;
+        return Math.max(min, Math.min(max, valor));
     }
 
     /**
