@@ -11,6 +11,8 @@ import DetalheContrato from './pages/DetalheContrato';
 import CriarContrato from './pages/CriarContrato';
 import AssinarContrato from './pages/AssinarContrato';
 import DownloadContrato from './pages/DownloadContrato';
+import PoliticaPrivacidade from './pages/PoliticaPrivacidade';
+import TermosServico from './pages/TermosServico';
 
 export default function App() {
   const { autenticado, profissional, sair } = useAuth();
@@ -47,8 +49,16 @@ export default function App() {
 
           <Route path="/assinar/:token" element={<AssinarContrato />} />
           <Route path="/download/:token" element={<DownloadContrato />} />
+
+          <Route path="/privacidade" element={<PoliticaPrivacidade />} />
+          <Route path="/termos" element={<TermosServico />} />
         </Routes>
       </main>
+
+      <footer className="app__footer">
+        <Link to="/privacidade">Política de Privacidade</Link>
+        <Link to="/termos">Termos de Serviço</Link>
+      </footer>
     </div>
   );
 }

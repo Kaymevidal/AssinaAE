@@ -248,6 +248,40 @@ button:disabled {
   border: 1px solid #b91c1c;
 }
 
+.app__footer {
+  display: flex;
+  justify-content: center;
+  gap: 24px;
+  padding: 20px 16px;
+  font-size: 0.85rem;
+}
+
+.app__footer a {
+  color: #6b7280;
+  text-decoration: none;
+}
+
+.app__footer a:hover {
+  text-decoration: underline;
+}
+
+.documento-legal h3 {
+  margin-top: 24px;
+  margin-bottom: 8px;
+}
+
+.documento-legal p,
+.documento-legal li {
+  color: #374151;
+  line-height: 1.5;
+}
+
+.documento-legal__atualizacao {
+  color: #6b7280;
+  font-size: 0.85rem;
+  margin-top: -8px;
+}
+
 .login__logo {
   display: block;
   height: 48px;
