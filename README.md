@@ -1,4 +1,4 @@
-# Assinatura Digital
+# AssinaAE
 
 Plataforma para envio de contratos em PDF a um profissional e a um cliente, coleta da assinatura de cada parte (desenhada em um canvas) e geração do PDF final assinado por ambos.
 
@@ -18,15 +18,14 @@ Configuração em [src/main/resources/application.yml](src/main/resources/applic
 |---|---|---|
 | `DB_URL` | JDBC URL do Postgres. Na Neon, algo como `jdbc:postgresql://ep-xxx.<região>.aws.neon.tech/assinatura_digital?sslmode=require` | `jdbc:postgresql://localhost:5432/assinatura_digital` |
 | `DB_USERNAME` / `DB_PASSWORD` | Credenciais do banco | `postgres` / `postgres` |
-| `MAIL_HOST` / `MAIL_PORT` | Servidor SMTP | `smtp.gmail.com` / `587` |
-| `MAIL_USERNAME` / `MAIL_PASSWORD` | Credenciais SMTP (para Gmail, use uma senha de app) | — |
-| `MAIL_FROM` | Remetente dos emails | — |
+| `MAIL_FROM` | Remetente dos emails | `seu-email@exemplo.com` |
+| `SENDGRID_API_KEY` | Chave da API HTTP do SendGrid, usada para o envio de emails (SMTP não é usado — ver [EmailService](src/main/java/com/kayomeira/assinatura/service/EmailService.java)) | — (envio de email fica desativado sem isso) |
 | `FRONTEND_URL` | Base usada nos links de assinatura enviados por email (em produção, a URL do deploy na Vercel) | `http://localhost:3000` |
 | `JWT_SECRET` | Segredo usado para assinar os tokens de login (HS256). **Troque em produção** — ex.: `openssl rand -base64 48` | valor de desenvolvimento, inseguro |
 | `JWT_EXPIRACAO_DIAS` | Validade do token de login, em dias | `7` |
 | `GOOGLE_CLIENT_ID` | Client ID OAuth do Google usado para validar o login com Google (veja abaixo) | — (login com Google fica desativado sem isso) |
 
-As tabelas são criadas/atualizadas automaticamente via `ddl-auto: update`. O banco em si (`assinatura_digital`, ou o nome que você criar) precisa existir antes — na Neon, ele é criado pelo painel/CLI da Neon, não pela aplicação.
+As tabelas são gerenciadas pelo Flyway ([src/main/resources/db/migration](src/main/resources/db/migration)), aplicado automaticamente ao subir a aplicação. O banco em si (`assinatura_digital`, ou o nome que você criar) precisa existir antes — na Neon, ele é criado pelo painel/CLI da Neon, não pela aplicação.
 
 ### Login com Google
 
