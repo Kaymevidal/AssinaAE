@@ -24,7 +24,7 @@ export default function App() {
   return (
     <div className="app">
       <header className="app__header">
-        <Link to="/" className="app__logo">Assinatura Digital</Link>
+        <Link to="/" className="app__logo">AssinaAE</Link>
         {autenticado && (
           <div className="app__conta">
             <span>{profissional.nome}</span>

@@ -97,7 +97,7 @@ public class EmailService {
         String corpo = "Olá,\n\n" +
                 nomeQuemRecusou + " recusou o contrato \"" + contrato.getTitulo() + "\".\n\n" +
                 "Nenhuma outra ação é necessária.\n\n" +
-                "Atenciosamente,\nPlataforma de Assinatura Digital";
+                "Atenciosamente,\nPlataforma AssinaAE";
 
         enviar(emailDestino, emailQuemRecusou, "Contrato recusado - " + contrato.getTitulo(), corpo, null, "notificação de recusa");
     }
@@ -110,9 +110,9 @@ public class EmailService {
                 "Confirme seu email para poder enviar contratos:\n" +
                 frontendUrl + "/verificar-email/" + profissional.getTokenVerificacaoEmail() + "\n\n" +
                 "Se você não criou essa conta, ignore este email.\n\n" +
-                "Atenciosamente,\nPlataforma de Assinatura Digital";
+                "Atenciosamente,\nPlataforma AssinaAE";
 
-        enviar(profissional.getEmail(), null, "Confirme seu email - Assinatura Digital", corpo, null, "email de verificação");
+        enviar(profissional.getEmail(), null, "Confirme seu email - AssinaAE", corpo, null, "email de verificação");
     }
 
     /**
@@ -124,9 +124,9 @@ public class EmailService {
                 "Recebemos um pedido para redefinir sua senha. O link abaixo é válido por 1 hora:\n" +
                 frontendUrl + "/redefinir-senha/" + profissional.getTokenResetSenha() + "\n\n" +
                 "Se você não pediu isso, ignore este email — sua senha continua a mesma.\n\n" +
-                "Atenciosamente,\nPlataforma de Assinatura Digital";
+                "Atenciosamente,\nPlataforma AssinaAE";
 
-        enviar(profissional.getEmail(), null, "Redefinição de senha - Assinatura Digital", corpo, null, "email de redefinição de senha");
+        enviar(profissional.getEmail(), null, "Redefinição de senha - AssinaAE", corpo, null, "email de redefinição de senha");
     }
 
     // ============ Métodos auxiliares ============
@@ -139,7 +139,7 @@ public class EmailService {
                 "O contrato \"" + contrato.getTitulo() + "\" foi completamente assinado por ambas as partes.\n\n" +
                 "Você pode baixar o PDF assinado no link abaixo:\n" +
                 frontendUrl + "/download/" + token + "\n\n" +
-                "Atenciosamente,\nPlataforma de Assinatura Digital";
+                "Atenciosamente,\nPlataforma AssinaAE";
 
         enviar(email, emailOutraParte, "✓ Contrato totalmente assinado - " + contrato.getTitulo(), corpo, null, "notificação de assinatura");
     }
@@ -154,7 +154,7 @@ public class EmailService {
         try {
             Map<String, Object> body = new LinkedHashMap<>();
             body.put("personalizations", List.of(Map.of("to", List.of(Map.of("email", destinatario)))));
-            body.put("from", Map.of("email", emailFrom, "name", "Assinatura Digital"));
+            body.put("from", Map.of("email", emailFrom, "name", "AssinaAE"));
             if (replyTo != null) {
                 body.put("reply_to", Map.of("email", replyTo));
             }
@@ -195,7 +195,7 @@ public class EmailService {
                 "Cliente: " + contrato.getNomeCliente() + "\n\n" +
                 "Clique no link abaixo para assinar:\n" +
                 frontendUrl + "/assinar/" + contrato.getTokenProfissional() + "\n\n" +
-                "Atenciosamente,\nPlataforma de Assinatura Digital";
+                "Atenciosamente,\nPlataforma AssinaAE";
     }
 
     private String gerarCorpoEmailCliente(Contrato contrato) {
@@ -206,13 +206,13 @@ public class EmailService {
                 "Profissional: " + contrato.getProfissional().getNome() + "\n\n" +
                 "Clique no link abaixo para assinar:\n" +
                 frontendUrl + "/assinar/" + contrato.getTokenCliente() + "\n\n" +
-                "Atenciosamente,\nPlataforma de Assinatura Digital";
+                "Atenciosamente,\nPlataforma AssinaAE";
     }
 
     private String gerarCorpoEmailPDFAssinado(Contrato contrato) {
         return "Olá,\n\n" +
                 "O contrato \"" + contrato.getTitulo() + "\" foi completamente assinado!\n\n" +
                 "O arquivo PDF assinado está anexado neste email.\n\n" +
-                "Atenciosamente,\nPlataforma de Assinatura Digital";
+                "Atenciosamente,\nPlataforma AssinaAE";
     }
 }
