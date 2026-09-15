@@ -67,8 +67,12 @@ public class Contrato {
     private LocalDateTime dataCriacao = LocalDateTime.now();
     
     private LocalDateTime dataAssinaturaProfissional;
-    
+
     private LocalDateTime dataAssinaturaCliente;
+
+    private LocalDateTime dataVisualizacaoProfissional;
+
+    private LocalDateTime dataVisualizacaoCliente;
     
     @Transient
     private String assinaturaProfissionalBase64;

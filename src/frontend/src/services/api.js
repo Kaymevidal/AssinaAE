@@ -84,6 +84,11 @@ export function buscarContratoPorToken(token) {
   return api.get(`/contratos/token/${token}`).then((res) => res.data);
 }
 
+/** Registra que quem acessou com aquele token visualizou o documento inteiro, pré-requisito pra assinar. */
+export function confirmarLeituraContrato(token) {
+  return api.post(`/contratos/token/${token}/confirmar-leitura`).then((res) => res.data);
+}
+
 export function assinarContrato(token, assinaturaBase64, posicao) {
   const { pagina, x, y, largura, altura } = posicao;
   return api

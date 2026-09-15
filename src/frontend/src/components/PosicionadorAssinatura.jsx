@@ -1,11 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
-
-// Carregado via CDN (em vez de dependência npm) pelo mesmo motivo do script
-// do Google em index.html: evita empacotar o pdf.js (e seu worker) no bundle
-// e não exige mexer no lockfile para uma lib só usada nesta tela.
-const PDFJS_VERSION = '4.7.76';
-const PDFJS_URL = `https://cdnjs.cloudflare.com/ajax/libs/pdf.js/${PDFJS_VERSION}/pdf.min.mjs`;
-const PDFJS_WORKER_URL = `https://cdnjs.cloudflare.com/ajax/libs/pdf.js/${PDFJS_VERSION}/pdf.worker.min.mjs`;
+import { carregarPdfjs } from '../lib/pdfjs';
 
 // A assinatura sempre vem do SignaturePad, cujo canvas é fixo em 400x180 —
 // manter essa proporção no redimensionamento evita distorcer o traço.
@@ -18,17 +12,6 @@ const LARGURA_PADRAO_FRACAO = 0.3;
 // o pdf.js não consiga carregar a pré-visualização: a assinatura ainda
 // pode ser confirmada, só sem o posicionamento visual.
 export const ULTIMA_PAGINA_SENTINELA = 999999;
-
-let pdfjsPromise = null;
-function carregarPdfjs() {
-  if (!pdfjsPromise) {
-    pdfjsPromise = import(/* @vite-ignore */ PDFJS_URL).then((lib) => {
-      lib.GlobalWorkerOptions.workerSrc = PDFJS_WORKER_URL;
-      return lib;
-    });
-  }
-  return pdfjsPromise;
-}
 
 function clamp(valor, min, max) {
   return Math.max(min, Math.min(max, valor));

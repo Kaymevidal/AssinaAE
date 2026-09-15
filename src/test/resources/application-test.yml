@@ -20,3 +20,8 @@ app:
   google-client-id: ""
   mail-from: teste@teste.com
   sendgrid-api-key: ""
+  # O contexto Spring (e o estado em memória do RateLimitFilter) é reaproveitado entre
+  # classes de IT, então o limite de produção estoura sem relação com o que cada teste
+  # individualmente exercita — bem mais alto aqui pra não travar a suíte inteira.
+  rate-limit:
+    max-tentativas: 1000

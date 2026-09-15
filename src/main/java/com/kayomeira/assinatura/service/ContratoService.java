@@ -3,6 +3,7 @@ package com.kayomeira.assinatura.service;
 import com.kayomeira.assinatura.dto.ContratoAssinaturaDTO;
 import com.kayomeira.assinatura.dto.ContratoRequestDTO;
 import com.kayomeira.assinatura.exception.ContratoNotFoundException;
+import com.kayomeira.assinatura.exception.DocumentoNaoVisualizadoException;
 import com.kayomeira.assinatura.exception.EmailNaoVerificadoException;
 import com.kayomeira.assinatura.exception.PdfInvalidoException;
 import com.kayomeira.assinatura.model.Contrato;
@@ -129,6 +130,31 @@ public class ContratoService {
     }
 
     /**
+     * Registra que quem acessou com aquele token visualizou o documento
+     * inteiro, pré-requisito pra poder assinar (checado em {@link #assinar}).
+     * Idempotente: reabrir o link não deve sobrescrever a primeira leitura.
+     */
+    @Transactional
+    public ContratoAssinaturaDTO confirmarLeitura(String token) {
+        Contrato contrato = buscarContratoPorTokenOuFalhar(token);
+        boolean isProfissional = token.equals(contrato.getTokenProfissional());
+
+        if (isProfissional) {
+            if (contrato.getDataVisualizacaoProfissional() == null) {
+                contrato.setDataVisualizacaoProfissional(LocalDateTime.now());
+            }
+        } else {
+            if (contrato.getDataVisualizacaoCliente() == null) {
+                contrato.setDataVisualizacaoCliente(LocalDateTime.now());
+            }
+        }
+
+        Contrato salvo = contratoRepository.save(contrato);
+        String papel = isProfissional ? "PROFISSIONAL" : "CLIENTE";
+        return ContratoAssinaturaDTO.fromEntity(salvo, papel);
+    }
+
+    /**
      * Registra a assinatura da parte associada ao token, embutindo a imagem
      * no PDF imediatamente (em cima do PDF original, ou do já parcialmente
      * assinado pela outra parte). Quando ambas as partes já tiverem
@@ -161,6 +187,13 @@ public class ContratoService {
         }
         if (statusOutraParte == StatusAssinatura.REJEITADO) {
             throw new IllegalStateException("A outra parte recusou este contrato — não é mais possível assinar");
+        }
+
+        LocalDateTime dataVisualizacao = isProfissional
+                ? contrato.getDataVisualizacaoProfissional()
+                : contrato.getDataVisualizacaoCliente();
+        if (dataVisualizacao == null) {
+            throw new DocumentoNaoVisualizadoException("Confirme que leu o documento antes de assinar");
         }
 
         byte[] pdfBase = contrato.getPdfAssinado() != null ? contrato.getPdfAssinado() : contrato.getPdfOriginal();

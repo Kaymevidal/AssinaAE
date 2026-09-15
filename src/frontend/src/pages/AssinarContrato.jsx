@@ -1,7 +1,14 @@
 import { useEffect, useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
-import { assinarContrato, buscarContratoPorToken, buscarPdfPreviewPorToken, rejeitarContrato } from '../services/api';
+import {
+  assinarContrato,
+  buscarContratoPorToken,
+  buscarPdfPreviewPorToken,
+  confirmarLeituraContrato,
+  rejeitarContrato,
+} from '../services/api';
 import SignaturePad from '../components/SignaturePad';
+import VisualizadorPdf from '../components/VisualizadorPdf';
 import PosicionadorAssinatura, { caixaPadrao, ULTIMA_PAGINA_SENTINELA } from '../components/PosicionadorAssinatura';
 
 export default function AssinarContrato() {
@@ -13,9 +20,15 @@ export default function AssinarContrato() {
   const [erro, setErro] = useState('');
   const [assinatura, setAssinatura] = useState(null);
   const [pdfPreview, setPdfPreview] = useState(null);
+  const [pdfPreviewFalhou, setPdfPreviewFalhou] = useState(false);
   const [posicao, setPosicao] = useState(null);
   const [assinando, setAssinando] = useState(false);
   const [recusando, setRecusando] = useState(false);
+
+  const [leituraConfirmada, setLeituraConfirmada] = useState(false);
+  const [leituraCompletaScroll, setLeituraCompletaScroll] = useState(false);
+  const [concordo, setConcordo] = useState(false);
+  const [confirmandoLeitura, setConfirmandoLeitura] = useState(false);
 
   useEffect(() => {
     buscarContratoPorToken(token)
@@ -25,16 +38,36 @@ export default function AssinarContrato() {
   }, [token]);
 
   useEffect(() => {
+    if (contrato?.documentoVisualizado) setLeituraConfirmada(true);
+  }, [contrato]);
+
+  useEffect(() => {
     if (!contrato || contrato.statusPapel !== 'PENDENTE') return;
     buscarPdfPreviewPorToken(token)
       .then((bytes) => setPdfPreview(new Uint8Array(bytes)))
       .catch(() => {
-        // Sem pré-visualização não dá pra posicionar visualmente, mas a assinatura
-        // ainda pode ser confirmada numa posição padrão.
+        // Sem pré-visualização não dá pra posicionar visualmente nem pra exigir a
+        // leitura completa rolando o documento, mas a assinatura ainda pode ser
+        // confirmada numa posição padrão, com só o checkbox de concordância.
         setPdfPreview(null);
+        setPdfPreviewFalhou(true);
         setPosicao({ pagina: ULTIMA_PAGINA_SENTINELA, ...caixaPadrao(contrato.papel === 'CLIENTE') });
       });
   }, [contrato, token]);
+
+  async function confirmarLeitura() {
+    setConfirmandoLeitura(true);
+    setErro('');
+    try {
+      const atualizado = await confirmarLeituraContrato(token);
+      setContrato(atualizado);
+      setLeituraConfirmada(true);
+    } catch (e) {
+      setErro(e.response?.data?.erro || 'Não foi possível confirmar a leitura do documento');
+    } finally {
+      setConfirmandoLeitura(false);
+    }
+  }
 
   async function confirmarAssinatura() {
     if (!assinatura) {
@@ -95,6 +128,38 @@ export default function AssinarContrato() {
         <p className="erro">Você recusou este contrato, {nomeSignatario}.</p>
       ) : jaAssinou ? (
         <p className="sucesso">Você já assinou este contrato, {nomeSignatario}. Aguardando a outra parte.</p>
+      ) : !leituraConfirmada ? (
+        <>
+          <p>Antes de assinar, leia o contrato inteiro, {nomeSignatario}:</p>
+
+          {pdfPreview && (
+            <VisualizadorPdf pdfBytes={pdfPreview} onLeituraCompleta={() => setLeituraCompletaScroll(true)} />
+          )}
+          {!pdfPreview && !pdfPreviewFalhou && <p className="posicionador__carregando">Carregando documento...</p>}
+          {pdfPreviewFalhou && (
+            <p className="aviso">Não foi possível carregar a pré-visualização do documento aqui, mas o contrato já foi enviado por email — confira lá antes de continuar.</p>
+          )}
+
+          <label className="leitura-obrigatoria__checkbox">
+            <input
+              type="checkbox"
+              checked={concordo}
+              disabled={pdfPreview && !leituraCompletaScroll}
+              onChange={(e) => setConcordo(e.target.checked)}
+            />
+            Li e concordo com os termos deste contrato
+          </label>
+
+          {erro && <p className="erro">{erro}</p>}
+          <div className="acoes-lado-a-lado">
+            <button type="button" onClick={confirmarLeitura} disabled={!concordo || confirmandoLeitura || recusando}>
+              {confirmandoLeitura ? 'Confirmando...' : 'Continuar para assinatura'}
+            </button>
+            <button type="button" className="botao-perigo" onClick={confirmarRecusa} disabled={confirmandoLeitura || recusando}>
+              {recusando ? 'Recusando...' : 'Recusar contrato'}
+            </button>
+          </div>
+        </>
       ) : (
         <>
           <p>Assine abaixo, {nomeSignatario}:</p>

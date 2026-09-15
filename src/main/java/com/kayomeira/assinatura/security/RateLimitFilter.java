@@ -5,6 +5,7 @@ import jakarta.servlet.FilterChain;
 import jakarta.servlet.ServletException;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.MediaType;
 import org.springframework.lang.NonNull;
 import org.springframework.stereotype.Component;
@@ -30,8 +31,13 @@ import java.util.concurrent.atomic.AtomicInteger;
 public class RateLimitFilter extends OncePerRequestFilter {
 
     private static final Set<String> ROTAS_LIMITADAS = Set.of("/api/auth/login", "/api/auth/registrar");
-    private static final int MAX_TENTATIVAS = 10;
     private static final Duration JANELA = Duration.ofMinutes(5);
+
+    // Configurável pra poder relaxar em testes (o mesmo contexto Spring, e portanto a mesma
+    // janela em memória, é reaproveitado entre classes de IT, então o limite de produção é
+    // fácil de estourar sem ter nada a ver com o que cada teste individualmente exercita).
+    @Value("${app.rate-limit.max-tentativas:10}")
+    private int maxTentativas;
 
     private final ObjectMapper objectMapper = new ObjectMapper().findAndRegisterModules();
     private final ConcurrentHashMap<String, Janela> tentativasPorChave = new ConcurrentHashMap<>();
@@ -61,7 +67,7 @@ public class RateLimitFilter extends OncePerRequestFilter {
                 janela.inicio = Instant.now();
                 janela.contagem.set(0);
             }
-            excedeu = janela.contagem.incrementAndGet() > MAX_TENTATIVAS;
+            excedeu = janela.contagem.incrementAndGet() > maxTentativas;
         }
 
         if (excedeu) {

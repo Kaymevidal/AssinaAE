@@ -48,6 +48,11 @@ public class GlobalExceptionHandler {
         return build(HttpStatus.FORBIDDEN, ex.getMessage());
     }
 
+    @ExceptionHandler(DocumentoNaoVisualizadoException.class)
+    public ResponseEntity<Map<String, Object>> handleDocumentoNaoVisualizado(DocumentoNaoVisualizadoException ex) {
+        return build(HttpStatus.FORBIDDEN, ex.getMessage());
+    }
+
     @ExceptionHandler(MuitasTentativasException.class)
     public ResponseEntity<Map<String, Object>> handleMuitasTentativas(MuitasTentativasException ex) {
         return build(HttpStatus.TOO_MANY_REQUESTS, ex.getMessage());

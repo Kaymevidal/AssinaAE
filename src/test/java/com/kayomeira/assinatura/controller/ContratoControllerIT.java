@@ -116,11 +116,18 @@ class ContratoControllerIT {
         String tokenProfissional = contrato.getTokenProfissional();
         String tokenCliente = contrato.getTokenCliente();
 
+        mockMvc.perform(post("/api/contratos/token/{token}/confirmar-leitura", tokenCliente))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.documentoVisualizado").value(true));
+
         mockMvc.perform(post("/api/contratos/token/{token}/assinar", tokenCliente)
                         .contentType("application/json")
                         .content("{\"assinaturaBase64\":\"" + ASSINATURA_BASE64 + "\",\"pagina\":0,\"x\":0.1,\"y\":0.8,\"largura\":0.3,\"altura\":0.1}"))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.ambosAssinaram").value(false));
+
+        mockMvc.perform(post("/api/contratos/token/{token}/confirmar-leitura", tokenProfissional))
+                .andExpect(status().isOk());
 
         mockMvc.perform(post("/api/contratos/token/{token}/assinar", tokenProfissional)
                         .contentType("application/json")
@@ -131,6 +138,28 @@ class ContratoControllerIT {
         mockMvc.perform(get("/api/contratos/token/{token}/download", tokenCliente))
                 .andExpect(status().isOk())
                 .andExpect(content().contentType("application/pdf"));
+    }
+
+    @Test
+    void assinarSemConfirmarLeituraEhBloqueado() throws Exception {
+        String tokenA = registrarLogarEVerificar("leitura-dono-it@teste.com");
+        MvcResult criacao = criarContrato(tokenA, "leitura-cliente-it@teste.com");
+        Long contratoId = objectMapper.readTree(criacao.getResponse().getContentAsString()).get("id").asLong();
+        Contrato contrato = contratoRepository.findById(contratoId).orElseThrow();
+
+        mockMvc.perform(post("/api/contratos/token/{token}/assinar", contrato.getTokenCliente())
+                        .contentType("application/json")
+                        .content("{\"assinaturaBase64\":\"" + ASSINATURA_BASE64 + "\",\"pagina\":0,\"x\":0.1,\"y\":0.8,\"largura\":0.3,\"altura\":0.1}"))
+                .andExpect(status().isForbidden());
+
+        mockMvc.perform(post("/api/contratos/token/{token}/confirmar-leitura", contrato.getTokenCliente()))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.documentoVisualizado").value(true));
+
+        mockMvc.perform(post("/api/contratos/token/{token}/assinar", contrato.getTokenCliente())
+                        .contentType("application/json")
+                        .content("{\"assinaturaBase64\":\"" + ASSINATURA_BASE64 + "\",\"pagina\":0,\"x\":0.1,\"y\":0.8,\"largura\":0.3,\"altura\":0.1}"))
+                .andExpect(status().isOk());
     }
 
     @Test

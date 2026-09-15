@@ -21,6 +21,7 @@ public class ContratoAssinaturaDTO {
     private String papel;
     private StatusAssinatura statusPapel;
     private boolean ambosAssinaram;
+    private boolean documentoVisualizado;
 
     public static ContratoAssinaturaDTO fromEntity(Contrato contrato, String papel) {
         boolean isProfissional = "PROFISSIONAL".equals(papel);
@@ -33,6 +34,9 @@ public class ContratoAssinaturaDTO {
                 .papel(papel)
                 .statusPapel(isProfissional ? contrato.getStatusProfissional() : contrato.getStatusCliente())
                 .ambosAssinaram(contrato.ambosAssinaram())
+                .documentoVisualizado(isProfissional
+                        ? contrato.getDataVisualizacaoProfissional() != null
+                        : contrato.getDataVisualizacaoCliente() != null)
                 .build();
     }
 }

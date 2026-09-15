@@ -78,6 +78,12 @@ public class ContratoController {
         return ResponseEntity.ok(contratoService.buscarPorToken(token));
     }
 
+    /** Registra que quem acessou com aquele token visualizou o documento inteiro, pré-requisito pra assinar. */
+    @PostMapping("/token/{token}/confirmar-leitura")
+    public ResponseEntity<ContratoAssinaturaDTO> confirmarLeitura(@PathVariable String token) {
+        return ResponseEntity.ok(contratoService.confirmarLeitura(token));
+    }
+
     @PostMapping("/token/{token}/assinar")
     public ResponseEntity<ContratoAssinaturaDTO> assinar(
             @PathVariable String token,
