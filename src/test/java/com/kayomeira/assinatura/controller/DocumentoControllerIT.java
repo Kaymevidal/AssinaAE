@@ -8,7 +8,9 @@ import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.mock.web.MockMultipartFile;
 import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.web.servlet.MockMvc;
+import org.springframework.test.web.servlet.MvcResult;
 
+import static org.assertj.core.api.Assertions.assertThat;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.multipart;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
@@ -22,6 +24,20 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 @AutoConfigureMockMvc
 @ActiveProfiles("test")
 class DocumentoControllerIT {
+
+    private static final String PDF_MINIMO = """
+            %PDF-1.1
+            1 0 obj << /Type /Catalog /Pages 2 0 R >> endobj
+            2 0 obj << /Type /Pages /Kids [3 0 R] /Count 1 >> endobj
+            3 0 obj << /Type /Page /Parent 2 0 R /MediaBox [0 0 200 200] >> endobj
+            xref
+            0 4
+            0000000000 65535 f\s
+            trailer << /Size 4 /Root 1 0 R >>
+            startxref
+            0
+            %%EOF
+            """;
 
     @Autowired
     private MockMvc mockMvc;
@@ -65,5 +81,24 @@ class DocumentoControllerIT {
         mockMvc.perform(multipart("/api/documentos/pdf-para-docx").file(arquivoVazio)
                         .header("Authorization", "Bearer " + tokenAuth))
                 .andExpect(status().isBadRequest());
+    }
+
+    @Test
+    void editarPdfAplicaEdicaoDeTexto() throws Exception {
+        String tokenAuth = registrar("documento-it-3@teste.com");
+        MockMultipartFile pdf = new MockMultipartFile("pdf", "c.pdf", "application/pdf", PDF_MINIMO.getBytes());
+        MockMultipartFile edicoes = new MockMultipartFile(
+                "edicoes", "", "application/json",
+                "[{\"pagina\":0,\"x\":0.1,\"y\":0.1,\"largura\":0.3,\"altura\":0.05,\"texto\":\"Texto novo\"}]".getBytes());
+
+        MvcResult resultado = mockMvc.perform(multipart("/api/documentos/editar-pdf")
+                        .file(pdf).file(edicoes)
+                        .header("Authorization", "Bearer " + tokenAuth))
+                .andExpect(status().isOk())
+                .andReturn();
+
+        byte[] corpo = resultado.getResponse().getContentAsByteArray();
+        assertThat(corpo.length).isGreaterThan(0);
+        assertThat(new String(corpo, 0, 5)).isEqualTo("%PDF-");
     }
 }

@@ -140,4 +140,14 @@ export function converterParaDocx(arquivo) {
     .then((res) => res.data);
 }
 
+export function editarPdf(pdf, edicoes) {
+  const formData = new FormData();
+  formData.append('pdf', pdf);
+  formData.append('edicoes', new Blob([JSON.stringify(edicoes)], { type: 'application/json' }));
+
+  return api
+    .post('/documentos/editar-pdf', formData, { responseType: 'blob' })
+    .then((res) => res.data);
+}
+
 export default api;

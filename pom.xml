@@ -97,6 +97,12 @@
             <version>${pdfbox.version}</version>
         </dependency>
 
+        <!-- Cache em memória na frente da conversão DOCX/PDF (spawna um processo externo, é a operação mais pesada da API) -->
+        <dependency>
+            <groupId>com.github.ben-manes.caffeine</groupId>
+            <artifactId>caffeine</artifactId>
+        </dependency>
+
         <!-- Lombok -->
         <dependency>
             <groupId>org.projectlombok</groupId>

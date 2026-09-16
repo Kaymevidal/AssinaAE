@@ -467,6 +467,52 @@ button:disabled {
   box-shadow: 0 1px 2px rgba(0, 0, 0, 0.06);
 }
 
+.editor-pdf {
+  margin: 16px 0;
+}
+
+.editor-pdf__pagina {
+  position: relative;
+  display: inline-block;
+  line-height: 0;
+}
+
+.editor-pdf__overlay {
+  position: absolute;
+  inset: 0;
+}
+
+.editor-pdf__item {
+  position: absolute;
+  padding: 0;
+  margin: 0;
+  background: transparent;
+  border: 1px dashed transparent;
+  border-radius: 2px;
+  cursor: text;
+}
+
+.editor-pdf__item:hover {
+  background: rgba(37, 99, 235, 0.12);
+  border-color: #2563eb;
+}
+
+.editor-pdf__item--editado {
+  background: rgba(21, 128, 61, 0.12);
+  border-color: #15803d;
+}
+
+.editor-pdf__input {
+  position: absolute;
+  padding: 0 2px;
+  margin: 0;
+  font: inherit;
+  font-size: 0.85rem;
+  border: 1px solid #2563eb;
+  border-radius: 2px;
+  background: #fff;
+}
+
 .leitura-obrigatoria__checkbox {
   display: flex;
   flex-direction: row;

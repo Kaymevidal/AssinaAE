@@ -1,19 +1,12 @@
 import { useState } from 'react';
-import { converterParaDocx, converterParaPdf } from '../services/api';
+import { converterParaPdf } from '../services/api';
 import { baixarBlob } from '../lib/download';
 
 function nomeSemExtensao(nome) {
   return nome.replace(/\.[^.]+$/, '');
 }
 
-function detectarExtensao(nome) {
-  const minusculo = nome.toLowerCase();
-  if (minusculo.endsWith('.pdf')) return 'pdf';
-  if (minusculo.endsWith('.docx')) return 'docx';
-  return null;
-}
-
-// Utilitário avulso: não cria contrato. Quando o resultado é um PDF, `onEnviarComoContrato` leva o arquivo pra aba de novo contrato.
+// Utilitário avulso: converte Word pra PDF. Não cria contrato — `onEnviarComoContrato` leva o resultado pra aba de novo contrato.
 export default function ConversorDocumento({ onEnviarComoContrato }) {
   const [arquivo, setArquivo] = useState(null);
   const [convertendo, setConvertendo] = useState(false);
@@ -23,12 +16,7 @@ export default function ConversorDocumento({ onEnviarComoContrato }) {
   async function converter(evento) {
     evento.preventDefault();
     if (!arquivo) {
-      setErro('Selecione um arquivo PDF ou Word');
-      return;
-    }
-    const extensao = detectarExtensao(arquivo.name);
-    if (!extensao) {
-      setErro('Selecione um arquivo .pdf ou .docx');
+      setErro('Selecione um arquivo Word (.docx)');
       return;
     }
 
@@ -36,14 +24,8 @@ export default function ConversorDocumento({ onEnviarComoContrato }) {
     setErro('');
     setResultado(null);
     try {
-      const nomeBase = nomeSemExtensao(arquivo.name);
-      if (extensao === 'pdf') {
-        const blob = await converterParaDocx(arquivo);
-        setResultado({ blob, tipo: 'docx', nomeArquivo: `${nomeBase}.docx` });
-      } else {
-        const blob = await converterParaPdf(arquivo);
-        setResultado({ blob, tipo: 'pdf', nomeArquivo: `${nomeBase}.pdf` });
-      }
+      const blob = await converterParaPdf(arquivo);
+      setResultado({ blob, nomeArquivo: `${nomeSemExtensao(arquivo.name)}.pdf` });
     } catch (e) {
       setErro(e.response?.data?.erro || 'Não foi possível converter o arquivo');
     } finally {
@@ -58,13 +40,13 @@ export default function ConversorDocumento({ onEnviarComoContrato }) {
 
   return (
     <div>
-      <p>Converta um contrato entre PDF e Word — escolha um arquivo e a conversão é feita automaticamente pro outro formato.</p>
+      <p>Converta um contrato do Word para PDF.</p>
       <form onSubmit={converter} className="form">
         <label>
-          Arquivo (PDF ou Word)
+          Arquivo Word (.docx)
           <input
             type="file"
-            accept=".pdf,.docx"
+            accept=".docx"
             onChange={(e) => {
               setArquivo(e.target.files[0]);
               setResultado(null);
@@ -85,13 +67,11 @@ export default function ConversorDocumento({ onEnviarComoContrato }) {
           <p className="sucesso">Conversão concluída: {resultado.nomeArquivo}</p>
           <div className="editar-contrato__acoes">
             <button type="button" className="botao-secundario" onClick={() => baixarBlob(resultado.blob, resultado.nomeArquivo)}>
-              Baixar {resultado.tipo === 'pdf' ? 'PDF' : 'Word'}
+              Baixar PDF
             </button>
-            {resultado.tipo === 'pdf' && (
-              <button type="button" onClick={enviarComoContrato}>
-                Enviar novo contrato
-              </button>
-            )}
+            <button type="button" onClick={enviarComoContrato}>
+              Enviar novo contrato
+            </button>
           </div>
         </div>
       )}

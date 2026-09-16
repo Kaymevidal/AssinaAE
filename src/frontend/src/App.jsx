@@ -8,7 +8,6 @@ import RedefinirSenha from './pages/RedefinirSenha';
 import VerificarEmail from './pages/VerificarEmail';
 import PainelProfissional from './pages/PainelProfissional';
 import DetalheContrato from './pages/DetalheContrato';
-import CriarContrato from './pages/CriarContrato';
 import AssinarContrato from './pages/AssinarContrato';
 import DownloadContrato from './pages/DownloadContrato';
 import PoliticaPrivacidade from './pages/PoliticaPrivacidade';
@@ -44,7 +43,7 @@ export default function App() {
           <Route path="/verificar-email/:token" element={<VerificarEmail />} />
 
           <Route path="/" element={<RotaProtegida><PainelProfissional /></RotaProtegida>} />
-          <Route path="/novo-contrato" element={<RotaProtegida><CriarContrato /></RotaProtegida>} />
+          <Route path="/novo-contrato" element={<RotaProtegida><PainelProfissional abaInicial="novo-contrato" /></RotaProtegida>} />
           <Route path="/contratos/:id" element={<RotaProtegida><DetalheContrato /></RotaProtegida>} />
 
           <Route path="/assinar/:token" element={<AssinarContrato />} />

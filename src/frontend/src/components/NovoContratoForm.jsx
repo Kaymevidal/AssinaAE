@@ -1,8 +1,7 @@
-import { useEffect, useState } from 'react';
+import { useState } from 'react';
 import { Link } from 'react-router-dom';
-import { converterParaDocx, converterParaPdf, criarContrato } from '../services/api';
-import { baixarBlob } from '../lib/download';
-import VisualizadorPdf from './VisualizadorPdf';
+import { criarContrato } from '../services/api';
+import EditorPdf from './EditorPdf';
 
 const CAMPOS_INICIAIS = {
   titulo: '',
@@ -18,14 +17,8 @@ export default function NovoContratoForm({ pdf, setPdf, pdfAnexadoAutomaticament
   const [erro, setErro] = useState('');
   const [sucesso, setSucesso] = useState(false);
 
-  const [editando, setEditando] = useState(false);
-  const [erroEdicao, setErroEdicao] = useState('');
-  const [mostrarPreview, setMostrarPreview] = useState(false);
-  const [previewBytes, setPreviewBytes] = useState(null);
-
-  useEffect(() => {
-    setMostrarPreview(false);
-  }, [pdf]);
+  const [editorAberto, setEditorAberto] = useState(false);
+  const [pdfBytesEditor, setPdfBytesEditor] = useState(null);
 
   function atualizarCampo(evento) {
     const { name, value } = evento.target;
@@ -54,44 +47,18 @@ export default function NovoContratoForm({ pdf, setPdf, pdfAnexadoAutomaticament
     }
   }
 
-  async function baixarComoWord() {
-    setEditando('baixando');
-    setErroEdicao('');
-    try {
-      const blob = await converterParaDocx(pdf);
-      baixarBlob(blob, 'contrato-para-editar.docx');
-    } catch (e) {
-      setErroEdicao(e.response?.data?.erro || 'Não foi possível gerar o Word');
-    } finally {
-      setEditando(false);
-    }
-  }
-
-  async function enviarArquivoEditado(evento) {
-    const arquivoDocx = evento.target.files[0];
-    evento.target.value = '';
-    if (!arquivoDocx) return;
-
-    setEditando('convertendo');
-    setErroEdicao('');
-    try {
-      const blob = await converterParaPdf(arquivoDocx);
-      setPdf(new File([blob], 'contrato-editado.pdf', { type: 'application/pdf' }));
-    } catch (e) {
-      setErroEdicao(e.response?.data?.erro || 'Não foi possível converter o arquivo editado');
-    } finally {
-      setEditando(false);
-    }
-  }
-
-  async function alternarPreview() {
-    if (mostrarPreview) {
-      setMostrarPreview(false);
-      return;
-    }
+  async function abrirEditor() {
     const buffer = await pdf.arrayBuffer();
-    setPreviewBytes(new Uint8Array(buffer));
-    setMostrarPreview(true);
+    setPdfBytesEditor(new Uint8Array(buffer));
+    setEditorAberto(true);
+  }
+
+  function fecharEditor(pdfEditadoBlob) {
+    if (pdfEditadoBlob) {
+      setPdf(new File([pdfEditadoBlob], 'contrato-editado.pdf', { type: 'application/pdf' }));
+    }
+    setEditorAberto(false);
+    setPdfBytesEditor(null);
   }
 
   if (sucesso) {
@@ -134,35 +101,22 @@ export default function NovoContratoForm({ pdf, setPdf, pdfAnexadoAutomaticament
 
         <label>
           PDF do contrato
-          <input type="file" accept="application/pdf" onChange={(e) => setPdf(e.target.files[0])} required />
+          <input type="file" accept="application/pdf" onChange={(e) => setPdf(e.target.files[0])} />
         </label>
 
+        {/* sem "required" no input: um PDF anexado pela aba Converter ou pelo editor só existe no
+            estado do React, nunca no input nativo — o navegador bloquearia o envio achando que está vazio */}
+        {pdf && <p className="posicionador__dica">Arquivo atual: {pdf.name}</p>}
         {pdf && pdfAnexadoAutomaticamente && <p className="aviso">Contrato anexado automaticamente pela conversão.</p>}
 
-        {pdf && (
-          <div className="editar-contrato">
-            <p>Precisa preencher os dados do cliente num contrato-modelo? Edite no Word antes de enviar:</p>
-            <div className="editar-contrato__acoes">
-              <button type="button" className="botao-secundario" onClick={baixarComoWord} disabled={!!editando}>
-                {editando === 'baixando' ? 'Convertendo...' : 'Baixar como Word'}
-              </button>
-              <label className="botao-secundario" style={{ display: 'inline-block', cursor: editando ? 'not-allowed' : 'pointer' }}>
-                {editando === 'convertendo' ? 'Convertendo...' : 'Enviar arquivo editado (.docx)'}
-                <input
-                  type="file"
-                  accept=".docx"
-                  onChange={enviarArquivoEditado}
-                  disabled={!!editando}
-                  style={{ display: 'none' }}
-                />
-              </label>
-              <button type="button" className="botao-secundario" onClick={alternarPreview}>
-                {mostrarPreview ? 'Ocultar prévia' : 'Visualizar'}
-              </button>
-            </div>
-            {erroEdicao && <p className="erro">{erroEdicao}</p>}
-            {mostrarPreview && previewBytes && <VisualizadorPdf pdfBytes={previewBytes} />}
-          </div>
+        {pdf && !editorAberto && (
+          <button type="button" className="botao-secundario" onClick={abrirEditor}>
+            Editar PDF
+          </button>
+        )}
+
+        {editorAberto && pdfBytesEditor && (
+          <EditorPdf pdfBytes={pdfBytesEditor} onSalvar={fecharEditor} onCancelar={() => fecharEditor(null)} />
         )}
 
         {erro && <p className="erro">{erro}</p>}
