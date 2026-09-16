@@ -46,9 +46,7 @@ export default function AssinarContrato() {
     buscarPdfPreviewPorToken(token)
       .then((bytes) => setPdfPreview(new Uint8Array(bytes)))
       .catch(() => {
-        // Sem pré-visualização não dá pra posicionar visualmente nem pra exigir a
-        // leitura completa rolando o documento, mas a assinatura ainda pode ser
-        // confirmada numa posição padrão, com só o checkbox de concordância.
+        // sem pré-visualização, só o checkbox de concordância libera a assinatura
         setPdfPreview(null);
         setPdfPreviewFalhou(true);
         setPosicao({ pagina: ULTIMA_PAGINA_SENTINELA, ...caixaPadrao(contrato.papel === 'CLIENTE') });

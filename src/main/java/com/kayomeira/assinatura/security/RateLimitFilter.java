@@ -33,9 +33,7 @@ public class RateLimitFilter extends OncePerRequestFilter {
     private static final Set<String> ROTAS_LIMITADAS = Set.of("/api/auth/login", "/api/auth/registrar");
     private static final Duration JANELA = Duration.ofMinutes(5);
 
-    // Configurável pra poder relaxar em testes (o mesmo contexto Spring, e portanto a mesma
-    // janela em memória, é reaproveitado entre classes de IT, então o limite de produção é
-    // fácil de estourar sem ter nada a ver com o que cada teste individualmente exercita).
+    // configurável pra relaxar em testes, que reaproveitam esta mesma janela em memória entre classes de IT
     @Value("${app.rate-limit.max-tentativas:10}")
     private int maxTentativas;
 

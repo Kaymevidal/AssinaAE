@@ -264,6 +264,12 @@ button:disabled {
   margin-top: -8px;
 }
 
+.botao-secundario {
+  background: transparent;
+  color: #2563eb;
+  border: 1px solid #2563eb;
+}
+
 .botao-perigo {
   background: transparent;
   color: #b91c1c;
@@ -382,6 +388,54 @@ button:disabled {
   margin-top: 8px;
   color: #6b7280;
   font-size: 0.85rem;
+}
+
+.abas-documento {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+  margin-bottom: 20px;
+}
+
+.abas-documento__item {
+  background: none;
+  border: none;
+  padding: 4px 0;
+  font-weight: 600;
+  color: #6b7280;
+  cursor: pointer;
+  border-bottom: 2px solid transparent;
+  border-radius: 0;
+}
+
+.abas-documento__item:hover:not(:disabled) {
+  color: #1a1a1a;
+}
+
+.abas-documento__item--ativa {
+  color: #2563eb;
+  border-bottom-color: #2563eb;
+}
+
+.abas-documento__separador {
+  color: #cfd3d9;
+}
+
+.editar-contrato {
+  margin: 16px 0;
+  padding: 16px;
+  background: #f4f5f7;
+  border: 1px solid #e2e4e8;
+  border-radius: 6px;
+}
+
+.editar-contrato__acoes {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 12px;
+  margin-top: 8px;
 }
 
 .visualizador {

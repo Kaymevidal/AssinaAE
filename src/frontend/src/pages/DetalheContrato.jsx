@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import { useParams } from 'react-router-dom';
 import { baixarContratoAutenticado, buscarContratoPorId } from '../services/api';
+import { baixarBlob } from '../lib/download';
 
 export default function DetalheContrato() {
   const { id } = useParams();
@@ -18,12 +19,7 @@ export default function DetalheContrato() {
     setBaixando(true);
     try {
       const blob = await baixarContratoAutenticado(id);
-      const url = URL.createObjectURL(blob);
-      const link = document.createElement('a');
-      link.href = url;
-      link.download = `contrato-${id}-assinado.pdf`;
-      link.click();
-      URL.revokeObjectURL(url);
+      baixarBlob(blob, `contrato-${id}-assinado.pdf`);
     } catch {
       setErro('Não foi possível baixar o PDF');
     } finally {

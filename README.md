@@ -10,12 +10,13 @@ O profissional tem conta (email/senha ou login com Google) e acompanha os contra
 - **Frontend**: React + Vite, publicado na Vercel.
 - **Autenticação**: JWT (HS256) para o profissional, com login por email/senha ou Google (ID token do Google Identity Services, validado no backend só com o Client ID — não usa client secret).
 - **Email**: enviado pela API HTTP do SendGrid ([EmailService](src/main/java/com/kayomeira/assinatura/service/EmailService.java)) em vez de SMTP, porque a Railway (onde o backend roda) bloqueia as portas SMTP de saída.
-- **PDF**: manipulado com Apache PDFBox no backend (embutir a assinatura, gerar o PDF final). No frontend, a pré-visualização da página para posicionar a assinatura usa pdf.js.
+- **PDF**: manipulado com Apache PDFBox no backend (embutir a assinatura, gerar o PDF final). No frontend, a pré-visualização e o leitor de contrato usam pdf.js.
+- **Conversão de documentos**: DOCX → PDF via LibreOffice headless (`soffice`); PDF → DOCX via [pdf2docx](https://github.com/ArtifexSoftware/pdf2docx) (Python) — o LibreOffice importa PDF como desenho e não tem filtro de exportação pra Writer. Ambos instalados na imagem Docker ([ConversaoDocxService](src/main/java/com/kayomeira/assinatura/service/ConversaoDocxService.java)).
 
 ## Fluxo de assinatura
 
-1. O profissional cria o contrato (título, descrição, dados do cliente e upload do PDF). O backend gera um token único de assinatura para o profissional e outro para o cliente, e envia o link de cada um por email.
-2. Quem acessa o link (`/assinar/:token`) desenha a própria assinatura em um canvas e depois a posiciona sobre a pré-visualização real do PDF — pode escolher a página, arrastar e redimensionar antes de confirmar. Posição e tamanho são guardados como frações da página (independentes de resolução de tela), convertidas para coordenadas do PDF no backend ([AssinaturaPDFService](src/main/java/com/kayomeira/assinatura/service/AssinaturaPDFService.java)).
+1. O profissional cria o contrato (título, descrição, dados do cliente e upload do PDF). Opcionalmente, converte um Word pra PDF antes de anexar, ou baixa o PDF anexado como Word pra preencher dados do cliente num contrato-modelo e reenviar já convertido de volta. O backend gera um token único de assinatura para o profissional e outro para o cliente, e envia o link de cada um por email.
+2. Quem acessa o link (`/assinar/:token`) primeiro rola o documento inteiro num leitor e marca "li e concordo" — sem isso o backend rejeita a assinatura. Só depois disso desenha a própria assinatura em um canvas e a posiciona sobre a pré-visualização real do PDF — pode escolher a página, arrastar e redimensionar antes de confirmar. Posição e tamanho são guardados como frações da página (independentes de resolução de tela), convertidas para coordenadas do PDF no backend ([AssinaturaPDFService](src/main/java/com/kayomeira/assinatura/service/AssinaturaPDFService.java)).
 3. Cada assinatura é embutida no PDF assim que confirmada (não em lote no final), acumulando sobre o PDF já parcialmente assinado pela outra parte.
 4. Quando ambas as partes assinam, o PDF final é enviado por email para as duas e fica disponível para download pelo próprio link (`/download/:token`) ou pelo painel do profissional.
 5. Qualquer uma das partes pode recusar o contrato antes de assinar; isso impede a outra parte de assinar depois.
@@ -50,19 +51,24 @@ Contratos (exigem `Authorization: Bearer <token>`, exceto as rotas `/token/**`):
 - `GET /api/contratos/meus` — lista os contratos do profissional autenticado (painel).
 - `GET /api/contratos/{id}` / `GET /api/contratos/{id}/download` — detalhe/download; só funciona se o contrato pertencer ao profissional autenticado.
 - `GET /api/contratos/token/{token}` — **pública**: dados do contrato para a página de assinatura (cliente ou profissional, sem login).
-- `GET /api/contratos/token/{token}/pdf-preview` — **pública**: PDF no estado atual (original ou parcialmente assinado), usado para posicionar a assinatura antes de confirmar.
-- `POST /api/contratos/token/{token}/assinar { assinaturaBase64, pagina, x, y, largura, altura }` — **pública**: registra a assinatura (PNG em Base64) na página e posição indicadas (frações 0–1) de quem acessou com aquele token.
+- `GET /api/contratos/token/{token}/pdf-preview` — **pública**: PDF no estado atual (original ou parcialmente assinado), usado para o leitor e para posicionar a assinatura antes de confirmar.
+- `POST /api/contratos/token/{token}/confirmar-leitura` — **pública**: registra que quem acessou com aquele token visualizou o documento inteiro; pré-requisito pra `/assinar`.
+- `POST /api/contratos/token/{token}/assinar { assinaturaBase64, pagina, x, y, largura, altura }` — **pública**: registra a assinatura (PNG em Base64) na página e posição indicadas (frações 0–1) de quem acessou com aquele token. Rejeita com 403 se a leitura não foi confirmada antes.
 - `GET /api/contratos/token/{token}/download` — **pública**: baixa o PDF assinado pelo próprio link, sem login.
 - `POST /api/contratos/token/{token}/rejeitar` — **pública**: recusa o contrato em nome de quem acessou com aquele token.
+
+Documentos (exigem `Authorization: Bearer <token>`):
+- `POST /api/documentos/docx-para-pdf` (multipart `arquivo`) — converte um `.docx` pra PDF.
+- `POST /api/documentos/pdf-para-docx` (multipart `arquivo`) — converte um PDF pra `.docx`.
 
 ## Frontend (rotas)
 
 Páginas do profissional (exigem login):
 - `/` — painel com os contratos em andamento e assinados.
-- `/novo-contrato` — formulário para criar um novo contrato (título, descrição, dados do cliente e upload do PDF).
+- `/novo-contrato` — duas abas: "Converter" (utilitário avulso PDF ⇄ Word) e "Novo contrato" (formulário de título, descrição, dados do cliente e upload do PDF, com edição opcional de dados do cliente via Word antes de enviar).
 - `/contratos/:id` — detalhe de um contrato e download do PDF assinado.
 - `/login`, `/registrar` — entrar ou criar conta (email/senha ou Google).
 
 Páginas do cliente (públicas, sem login):
-- `/assinar/:token` — página de assinatura acessada pelo link enviado por email; desenhar a assinatura e posicioná-la no PDF.
+- `/assinar/:token` — página de assinatura acessada pelo link enviado por email; ler o contrato inteiro, desenhar a assinatura e posicioná-la no PDF.
 - `/download/:token` — status do contrato e link para baixar o PDF assinado quando completo.

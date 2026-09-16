@@ -27,8 +27,9 @@ spring:
 
   servlet:
     multipart:
-      max-file-size: 10MB
-      max-request-size: 10MB
+      # folga pro ciclo PDF -> DOCX -> PDF de editar dados do cliente
+      max-file-size: 15MB
+      max-request-size: 15MB
 
 management:
   endpoints:

@@ -120,4 +120,24 @@ export function baixarContratoAutenticado(id) {
   return api.get(`/contratos/${id}/download`, { responseType: 'blob' }).then((res) => res.data);
 }
 
+// ---- Conversão de documentos ----
+
+function formDataComArquivo(arquivo) {
+  const formData = new FormData();
+  formData.append('arquivo', arquivo);
+  return formData;
+}
+
+export function converterParaPdf(arquivo) {
+  return api
+    .post('/documentos/docx-para-pdf', formDataComArquivo(arquivo), { responseType: 'blob' })
+    .then((res) => res.data);
+}
+
+export function converterParaDocx(arquivo) {
+  return api
+    .post('/documentos/pdf-para-docx', formDataComArquivo(arquivo), { responseType: 'blob' })
+    .then((res) => res.data);
+}
+
 export default api;

@@ -48,6 +48,12 @@ public class GlobalExceptionHandler {
         return build(HttpStatus.FORBIDDEN, ex.getMessage());
     }
 
+    @ExceptionHandler(ConversaoDocumentoException.class)
+    public ResponseEntity<Map<String, Object>> handleConversaoDocumento(ConversaoDocumentoException ex) {
+        log.error("Falha na conversão de documento: {}", ex.getMessage());
+        return build(HttpStatus.INTERNAL_SERVER_ERROR, ex.getMessage());
+    }
+
     @ExceptionHandler(DocumentoNaoVisualizadoException.class)
     public ResponseEntity<Map<String, Object>> handleDocumentoNaoVisualizado(DocumentoNaoVisualizadoException ex) {
         return build(HttpStatus.FORBIDDEN, ex.getMessage());

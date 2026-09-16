@@ -85,9 +85,7 @@ export default function VisualizadorPdf({ pdfBytes, onLeituraCompleta }) {
           onLeituraCompleta?.();
         }
       },
-      // `root` explícito no container rolável: sem isso o IntersectionObserver
-      // considera a viewport inteira, e a última página pode "intersectar" mesmo
-      // sem o usuário ter rolado o suficiente dentro da caixa de pré-visualização.
+      // root explícito: sem isso considera a viewport inteira, não o scroll da caixa
       { root: containerRef.current, threshold: 0.6 },
     );
 
