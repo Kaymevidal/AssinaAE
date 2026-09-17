@@ -1,7 +1,12 @@
 package com.kayomeira.assinatura.service;
 
 import com.kayomeira.assinatura.dto.EdicaoTextoDTO;
+import org.apache.pdfbox.Loader;
+import org.apache.pdfbox.pdmodel.PDDocument;
+import org.apache.pdfbox.text.PDFTextStripper;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.CsvSource;
 
 import java.util.List;
 
@@ -78,5 +83,69 @@ class EdicaoPdfServiceTest {
     void listaVaziaDevolveDocumentoIntacto() throws Exception {
         byte[] resultado = service.aplicarEdicoes(PDF_MINIMO.getBytes(), List.of());
         assertThat(resultado).isNotEmpty();
+    }
+
+    @ParameterizedTest
+    @CsvSource({
+            "serif, false, false",
+            "serif, true, false",
+            "serif, false, true",
+            "serif, true, true",
+            "monospace, false, false",
+            "monospace, true, true",
+            "sans, false, false",
+            "sans, true, false",
+            "sans, false, true",
+            "sans, true, true",
+    })
+    void todaCombinacaoDeFonteAplicaOTextoCorretamente(String familia, boolean negrito, boolean italico) throws Exception {
+        EdicaoTextoDTO edicao = edicao(0, 0.1f, 0.1f, 0.5f, 0.08f, "Texto " + familia + negrito + italico);
+        edicao.setFamiliaFonte(familia);
+        edicao.setNegrito(negrito);
+        edicao.setItalico(italico);
+
+        byte[] resultado = service.aplicarEdicoes(PDF_MINIMO.getBytes(), List.of(edicao));
+
+        assertThat(extrairTexto(resultado)).contains(edicao.getTexto());
+    }
+
+    @Test
+    void familiaDeFonteNulaCaiNoPadraoSemQuebrar() throws Exception {
+        EdicaoTextoDTO edicao = edicao(0, 0.1f, 0.1f, 0.5f, 0.08f, "Texto sem familia definida");
+
+        byte[] resultado = service.aplicarEdicoes(PDF_MINIMO.getBytes(), List.of(edicao));
+
+        assertThat(extrairTexto(resultado)).contains("Texto sem familia definida");
+    }
+
+    @Test
+    void corPersonalizadaDeTextoEFundoNaoQuebraAEdicao() throws Exception {
+        EdicaoTextoDTO edicao = edicao(0, 0.1f, 0.1f, 0.5f, 0.08f, "Texto colorido");
+        edicao.setCorR(200);
+        edicao.setCorG(30);
+        edicao.setCorB(30);
+        edicao.setFundoR(255);
+        edicao.setFundoG(240);
+        edicao.setFundoB(200);
+
+        byte[] resultado = service.aplicarEdicoes(PDF_MINIMO.getBytes(), List.of(edicao));
+
+        assertThat(extrairTexto(resultado)).contains("Texto colorido");
+    }
+
+    @Test
+    void textoMuitoMaiorQueACaixaAindaAplicaSemQuebrar() throws Exception {
+        String textoLongo = "Esse texto de substituição é bem mais longo do que a caixa original permitiria mostrar sem ajuste de largura";
+        EdicaoTextoDTO edicao = edicao(0, 0.1f, 0.1f, 0.15f, 0.03f, textoLongo);
+
+        byte[] resultado = service.aplicarEdicoes(PDF_MINIMO.getBytes(), List.of(edicao));
+
+        assertThat(extrairTexto(resultado)).contains(textoLongo);
+    }
+
+    private String extrairTexto(byte[] pdfBytes) throws Exception {
+        try (PDDocument documento = Loader.loadPDF(pdfBytes)) {
+            return new PDFTextStripper().getText(documento);
+        }
     }
 }

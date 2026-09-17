@@ -38,4 +38,21 @@ public class EdicaoTextoDTO {
 
     /** Texto novo — pode ser vazio, pra só apagar o texto original. */
     private String texto;
+
+    /** "serif" | "monospace" | "sans" (ou nulo) — detectado no frontend a partir do textContent do pdf.js. */
+    private String familiaFonte;
+
+    private Boolean negrito;
+
+    private Boolean italico;
+
+    /** Cor do texto (0-255), amostrada do PDF renderizado. Nula usa preto. */
+    private Integer corR;
+    private Integer corG;
+    private Integer corB;
+
+    /** Cor de fundo pra cobrir o texto original (0-255), amostrada do PDF renderizado. Nula usa branco. */
+    private Integer fundoR;
+    private Integer fundoG;
+    private Integer fundoB;
 }

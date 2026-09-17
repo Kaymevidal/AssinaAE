@@ -2,6 +2,69 @@ import { useEffect, useRef, useState } from 'react';
 import { carregarPdfjs } from '../lib/pdfjs';
 import { editarPdf } from '../services/api';
 
+// heurísticas empíricas — pdf.js não expõe negrito/itálico de verdade na API pública
+const LIMIAR_DENSIDADE_NEGRITO = 0.24;
+const LIMIAR_INCLINACAO_ITALICO = 0.08; // radianos (~4.6°)
+
+function classificarFamilia(fontFamily) {
+  const f = (fontFamily || '').toLowerCase();
+  if (f.includes('monospace')) return 'monospace';
+  if (f.includes('sans-serif')) return 'sans';
+  if (f.includes('serif')) return 'serif';
+  return 'sans';
+}
+
+/**
+ * Amostra os pixels já renderizados no canvas pra estimar a cor do texto, a
+ * cor de fundo e a "densidade de tinta" (usada como sinal de negrito) numa
+ * região. Passo variável: sempre soma perto de ~400 amostras, pra não pesar
+ * em regiões grandes (telas de alta densidade de pixels).
+ */
+function amostrarRegiao(contexto, xPx, yPx, wPx, hPx) {
+  const x = Math.max(0, Math.round(xPx));
+  const y = Math.max(0, Math.round(yPx));
+  const w = Math.max(1, Math.round(wPx));
+  const h = Math.max(1, Math.round(hPx));
+
+  let dados;
+  try {
+    dados = contexto.getImageData(x, y, w, h).data;
+  } catch {
+    return null;
+  }
+
+  const passo = Math.max(1, Math.floor(Math.sqrt((w * h) / 400)));
+  let somaClaraR = 0, somaClaraG = 0, somaClaraB = 0, claros = 0;
+  let somaEscuraR = 0, somaEscuraG = 0, somaEscuraB = 0, escuros = 0;
+  let amostras = 0;
+
+  for (let py = 0; py < h; py += passo) {
+    for (let px = 0; px < w; px += passo) {
+      const i = (py * w + px) * 4;
+      const r = dados[i];
+      const g = dados[i + 1];
+      const b = dados[i + 2];
+      const luminancia = 0.299 * r + 0.587 * g + 0.114 * b;
+      amostras++;
+      if (luminancia < 128) {
+        somaEscuraR += r; somaEscuraG += g; somaEscuraB += b; escuros++;
+      } else {
+        somaClaraR += r; somaClaraG += g; somaClaraB += b; claros++;
+      }
+    }
+  }
+
+  return {
+    corTexto: escuros > 0
+      ? [Math.round(somaEscuraR / escuros), Math.round(somaEscuraG / escuros), Math.round(somaEscuraB / escuros)]
+      : null,
+    corFundo: claros > 0
+      ? [Math.round(somaClaraR / claros), Math.round(somaClaraG / claros), Math.round(somaClaraB / claros)]
+      : null,
+    densidadeTinta: amostras > 0 ? escuros / amostras : 0,
+  };
+}
+
 /**
  * Editor de PDF: clica em cima de um texto do documento e edita ali mesmo.
  * Não é reflow de texto de verdade — cobre a posição original e escreve o
@@ -9,6 +72,12 @@ import { editarPdf } from '../services/api';
  * editores de PDF usam na prática. Cada item vem do textContent do pdf.js,
  * então a granularidade do clique é a mesma dos "runs" de texto do PDF
  * (geralmente palavras/trechos, não necessariamente a linha inteira).
+ *
+ * Família da fonte, negrito, itálico e cores são detectados automaticamente
+ * (textContent.styles do pdf.js + amostragem dos pixels renderizados) — são
+ * aproximações, não a fonte original: PDF embute/recorta fontes que não
+ * mapeiam pra um nome de sistema, e negrito/itálico não têm um sinal
+ * confiável na API pública do pdf.js.
  */
 export default function EditorPdf({ pdfBytes, onSalvar, onCancelar }) {
   const [pdfDoc, setPdfDoc] = useState(null);
@@ -66,16 +135,18 @@ export default function EditorPdf({ pdfBytes, onSalvar, onCancelar }) {
         // cada página é isolada: se uma falhar ao renderizar/extrair texto, as outras continuam editáveis
         try {
           const page = await pdfDoc.getPage(i);
+          const dpr = window.devicePixelRatio || 1;
           const larguraAlvo = Math.min(canvas.parentElement?.clientWidth || 480, 640);
-          const escala = larguraAlvo / page.getViewport({ scale: 1 }).width;
-          const viewport = page.getViewport({ scale: escala });
+          const escalaBase = larguraAlvo / page.getViewport({ scale: 1 }).width;
+          const viewport = page.getViewport({ scale: escalaBase * dpr });
 
           canvas.width = viewport.width;
           canvas.height = viewport.height;
           canvas.style.width = `${larguraAlvo}px`;
-          canvas.style.height = `${viewport.height}px`;
+          canvas.style.height = `${viewport.height / dpr}px`;
 
-          await page.render({ canvasContext: canvas.getContext('2d'), viewport }).promise;
+          const contexto = canvas.getContext('2d');
+          await page.render({ canvasContext: contexto, viewport }).promise;
 
           const textContent = await page.getTextContent();
           const itens = textContent.items
@@ -84,15 +155,28 @@ export default function EditorPdf({ pdfBytes, onSalvar, onCancelar }) {
               // mesma técnica que o textLayerBuilder do próprio pdf.js usa pra posicionar a camada de texto
               const tx = pdfjsLib.Util.transform(viewport.transform, item.transform);
               const alturaPx = Math.hypot(tx[2], tx[3]);
-              const larguraPx = item.width * escala;
+              const larguraPx = item.width * escalaBase * dpr;
+              const xPx = tx[4];
               const topoPx = tx[5] - alturaPx;
+
+              const estiloFonte = textContent.styles[item.fontName] || {};
+              const amostra = amostrarRegiao(contexto, xPx, topoPx, larguraPx, alturaPx);
+
+              // inclinação da matriz de transformação: sinal de itálico simulado (não pega fonte
+              // itálica de verdade, que já vem com o glifo inclinado sem alterar a matriz)
+              const inclinacao = Math.abs(Math.atan2(item.transform[2], item.transform[3]));
 
               return {
                 texto: item.str,
-                x: tx[4] / viewport.width,
+                x: xPx / viewport.width,
                 y: topoPx / viewport.height,
                 largura: larguraPx / viewport.width,
                 altura: alturaPx / viewport.height,
+                familiaFonte: classificarFamilia(estiloFonte.fontFamily),
+                negrito: !!amostra && amostra.densidadeTinta > LIMIAR_DENSIDADE_NEGRITO,
+                italico: inclinacao > LIMIAR_INCLINACAO_ITALICO,
+                corTexto: amostra?.corTexto ?? null,
+                corFundo: amostra?.corFundo ?? null,
               };
             })
             .filter(
@@ -140,6 +224,15 @@ export default function EditorPdf({ pdfBytes, onSalvar, onCancelar }) {
             largura: item.largura,
             altura: item.altura,
             texto: edicoes[chave],
+            familiaFonte: item.familiaFonte,
+            negrito: item.negrito,
+            italico: item.italico,
+            corR: item.corTexto?.[0] ?? null,
+            corG: item.corTexto?.[1] ?? null,
+            corB: item.corTexto?.[2] ?? null,
+            fundoR: item.corFundo?.[0] ?? null,
+            fundoG: item.corFundo?.[1] ?? null,
+            fundoB: item.corFundo?.[2] ?? null,
           });
         }
       });
